@@ -68,7 +68,7 @@ class student_search {
 
         $students = $DB->get_records_sql($sql, $params, 0, $limit);
 
-        return array_values(array_map(static function($student): array {
+        return array_values(array_map(static function ($student): array {
             return [
                 'id' => (int)$student->id,
                 'fullname' => \fullname($student),

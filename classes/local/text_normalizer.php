@@ -56,7 +56,7 @@ class text_normalizer {
      * @return array Normalized array.
      */
     public static function normalize_payload(array $payload): array {
-        array_walk_recursive($payload, static function(&$item): void {
+        array_walk_recursive($payload, static function (&$item): void {
             if (is_string($item)) {
                 $item = self::remove_accents($item);
             }

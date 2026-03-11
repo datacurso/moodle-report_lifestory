@@ -26,12 +26,7 @@
 defined('MOODLE_INTERNAL') || die();
 
 if ($hassiteconfig) {
-    $ADMIN->add('reports', new admin_category(
-        'report_lifestory_cat',
-        get_string('pluginname', 'report_lifestory')
-    ));
-
-    $ADMIN->add('report_lifestory_cat', new admin_externalpage(
+    $ADMIN->add('reports', new admin_externalpage(
         'report_lifestory',
         get_string('lifestory', 'report_lifestory'),
         new moodle_url('/report/lifestory/index.php')

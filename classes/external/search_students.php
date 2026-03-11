@@ -18,9 +18,10 @@ namespace report_lifestory\external;
 
 use core_external\external_api;
 use core_external\external_function_parameters;
-use core_external\external_value;
-use core_external\external_single_structure;
 use core_external\external_multiple_structure;
+use core_external\external_single_structure;
+use core_external\external_value;
+use report_lifestory\local\student_search;
 
 /**
  * External function for searching students.
@@ -48,8 +49,6 @@ class search_students extends external_api {
      * @return array
      */
     public static function execute($query) {
-        global $DB;
-
         $params = self::validate_parameters(self::execute_parameters(), [
             'query' => $query,
         ]);
@@ -61,53 +60,11 @@ class search_students extends external_api {
 
         require_capability('report/lifestory:view', $context);
 
-        $query = trim($params['query']);
-
-        if (empty($query)) {
-            return ['students' => []];
-        }
-
-        $role = $DB->get_record('role', ['shortname' => 'student']);
-
-        if (!$role) {
-            return ['students' => []];
-        }
-
-        $assignments = $DB->get_records('role_assignments', ['roleid' => $role->id]);
-        $userids = array_unique(array_column($assignments, 'userid'));
-
-        if (empty($userids)) {
-            return ['students' => []];
-        }
-
-        [$insql, $inparams] = $DB->get_in_or_equal($userids, SQL_PARAMS_NAMED);
-
-        $searchsql = "id $insql AND deleted = 0 AND (
-            " . $DB->sql_like('firstname', ':search1', false) . " OR
-            " . $DB->sql_like('lastname', ':search2', false) . " OR
-            " . $DB->sql_like('email', ':search3', false) . " OR
-            " . $DB->sql_like($DB->sql_fullname(), ':search4', false) . "
-        )";
-
-        $searchparam = '%' . $DB->sql_like_escape($query) . '%';
-        $inparams['search1'] = $searchparam;
-        $inparams['search2'] = $searchparam;
-        $inparams['search3'] = $searchparam;
-        $inparams['search4'] = $searchparam;
-
-        $students = $DB->get_records_select(
-            'user',
-            $searchsql,
-            $inparams,
-            'lastname ASC, firstname ASC',
-            'id, firstname, lastname, email',
-            0,
-            10
-        );
+        $students = student_search::search($params['query']);
 
         $results = [];
         foreach ($students as $student) {
-            $usercontext = \context_user::instance($student->id);
+            $usercontext = \context_user::instance($student['id']);
             $profileimageurl = \moodle_url::make_pluginfile_url(
                 $usercontext->id,
                 'user',
@@ -118,9 +75,9 @@ class search_students extends external_api {
             )->out(false);
 
             $results[] = [
-                'id' => $student->id,
-                'fullname' => fullname($student),
-                'email' => $student->email,
+                'id' => $student['id'],
+                'fullname' => $student['fullname'],
+                'email' => $student['email'],
                 'profileimageurl' => $profileimageurl,
             ];
         }

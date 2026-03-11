@@ -27,7 +27,7 @@ export const init = () => {
     const buttons = document.querySelectorAll("#btn-feedback-ai");
 
     buttons.forEach(button => {
-        button.addEventListener("click", async  e => {
+        button.addEventListener("click", async e => {
             if (button.classList.contains('report_lifestory-btnloading')) {
                 e.preventDefault();
                 return;
@@ -51,22 +51,7 @@ export const init = () => {
                 return;
             }
 
-            if (redirect.includes("action=csv")) {
-                const iframe = document.createElement("iframe");
-                iframe.style.display = "none";
-                iframe.src = redirect;
-                document.body.appendChild(iframe);
-
-                setTimeout(() => {
-                    button.classList.remove('report_lifestory-btnloading');
-                    button.removeAttribute("aria-disabled");
-                    button.style.pointerEvents = "";
-                    button.textContent = originalText;
-                    iframe.remove();
-                }, 500);
-            } else {
-                window.location.href = redirect;
-            }
+            window.location.href = redirect;
         });
     });
 };

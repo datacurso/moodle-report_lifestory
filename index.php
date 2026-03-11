@@ -28,11 +28,15 @@ require_once($CFG->dirroot . '/grade/lib.php');
 require_once($CFG->dirroot . '/grade/report/lib.php');
 
 use report_lifestory\api\client;
-use report_lifestory\local\utils;
+use report_lifestory\local\csv_exporter;
+use report_lifestory\local\payload_builder;
+use report_lifestory\local\student_search;
+use report_lifestory\local\text_normalizer;
 
 $userid = optional_param('userid', 0, PARAM_INT);
 $courseid = optional_param('id', 0, PARAM_INT);
 $action = optional_param('action', '', PARAM_ALPHA);
+$searchvalue = optional_param('searchvalue', '', PARAM_TEXT);
 
 require_login();
 
@@ -46,15 +50,14 @@ require_capability('report/lifestory:view', $context);
 
 // Export CSV.
 if ($userid && $action === 'csv') {
-    $payload = utils::build_student_payload($userid);
-    $payload = utils::normalize_payload($payload);
-    utils::export_to_csv($payload);
+    $payload = payload_builder::build($userid);
+    $payload = text_normalizer::normalize_payload($payload);
+    csv_exporter::export($payload);
     exit;
 }
 
 // Page configuration.
-$systemcontext = context_system::instance();
-$PAGE->set_context($systemcontext);
+$PAGE->set_context($context);
 $PAGE->set_url(new moodle_url('/report/lifestory/index.php', ['userid' => $userid, 'id' => $courseid]));
 $PAGE->set_title(get_string('lifestory', 'report_lifestory'));
 $PAGE->set_heading(get_string('lifestory', 'report_lifestory'));
@@ -73,49 +76,8 @@ echo $OUTPUT->header();
 $searchresults = [];
 $selecteduser = null;
 
-if (!empty($searchvalue)) {
-    $role = $DB->get_record('role', ['shortname' => 'student']);
-
-    if ($role) {
-        $assignments = $DB->get_records('role_assignments', ['roleid' => $role->id]);
-        $userids = array_unique(array_column($assignments, 'userid'));
-
-        if (!empty($userids)) {
-            [$insql, $inparams] = $DB->get_in_or_equal($userids, SQL_PARAMS_NAMED);
-
-            // Search by first name, last name, or email.
-            $searchsql = "id $insql AND deleted = 0 AND (
-                " . $DB->sql_like('firstname', ':search1', false) . " OR
-                " . $DB->sql_like('lastname', ':search2', false) . " OR
-                " . $DB->sql_like('email', ':search3', false) . " OR
-                " . $DB->sql_like($DB->sql_fullname(), ':search4', false) . "
-            )";
-
-            $searchparam = '%' . $DB->sql_like_escape($searchvalue) . '%';
-            $inparams['search1'] = $searchparam;
-            $inparams['search2'] = $searchparam;
-            $inparams['search3'] = $searchparam;
-            $inparams['search4'] = $searchparam;
-
-            $students = $DB->get_records_select(
-                'user',
-                $searchsql,
-                $inparams,
-                'lastname ASC, firstname ASC',
-                'id, firstname, lastname, email',
-                0,
-                10,
-            );
-
-            foreach ($students as $student) {
-                $searchresults[] = [
-                    'id' => $student->id,
-                    'fullname' => fullname($student),
-                    'email' => $student->email,
-                ];
-            }
-        }
-    }
+if ($searchvalue !== '') {
+    $searchresults = student_search::search($searchvalue);
 }
 
 // Get selected user info.
@@ -157,7 +119,7 @@ $feedbackhtml = null;
 
 if ($userid && $action === 'feedback') {
     try {
-        $payload = utils::build_student_payload($userid);
+        $payload = payload_builder::build($userid);
         $response = client::send_to_ai($payload);
 
         $replytext = '';
@@ -207,7 +169,6 @@ $templatecontext = [
     'userid' => $userid,
     'searchvalue' => $searchvalue,
     'searchresults' => $searchresults,
-    'hassearchresults' => !empty($searchresults),
     'selecteduser' => $selecteduser,
     'hasuser' => (bool)$userid,
     'courses' => $coursesdata,

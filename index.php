@@ -116,6 +116,18 @@ if ($userid) {
 
 // AI Feedback.
 $feedbackhtml = null;
+$feedbacksessionkey = 'report_lifestory_feedback';
+$feedbackcacheid = $USER->id . ':' . $userid . ':' . $courseid;
+
+if (!empty($SESSION->{$feedbacksessionkey}[$feedbackcacheid])) {
+    $replytext = $SESSION->{$feedbacksessionkey}[$feedbackcacheid];
+    unset($SESSION->{$feedbacksessionkey}[$feedbackcacheid]);
+
+    $feedbackhtml = html_writer::div(
+        format_text($replytext, FORMAT_MARKDOWN),
+        'report_lifestory-feedbackcontent bg-light p-3 rounded'
+    );
+}
 
 if ($userid && $action === 'feedback') {
     try {
@@ -137,10 +149,7 @@ if ($userid && $action === 'feedback') {
             $replytext = get_string('noresponse', 'report_lifestory');
         }
 
-        $feedbackhtml = html_writer::div(
-            format_text($replytext, FORMAT_MARKDOWN),
-            'report_lifestory-feedbackcontent bg-light p-3 rounded'
-        );
+        $SESSION->{$feedbacksessionkey}[$feedbackcacheid] = $replytext;
     } catch (\moodle_exception $e) {
         debugging(get_string('error_ai_service', 'report_lifestory', $e->getMessage()), DEBUG_DEVELOPER);
 
@@ -156,6 +165,8 @@ if ($userid && $action === 'feedback') {
             \core\output\notification::NOTIFY_ERROR
         );
     }
+
+    redirect(new moodle_url('/report/lifestory/index.php', ['userid' => $userid, 'id' => $courseid]));
 }
 
 // Render Mustache.

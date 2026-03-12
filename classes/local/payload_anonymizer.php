@@ -63,7 +63,7 @@ class payload_anonymizer {
      * Restore anonymized placeholders in AI reply text.
      *
      * @param string $text AI reply text.
-     * @param array<string, string> $replacements Placeholder => original value map.
+     * @param array $replacements Placeholder to original value map.
      * @return string
      */
     public static function deanonymize_text(string $text, array $replacements): string {

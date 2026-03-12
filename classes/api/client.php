@@ -25,6 +25,7 @@
 namespace report_lifestory\api;
 
 use aiprovider_datacurso\httpclient\ai_services_api;
+use report_lifestory\local\payload_anonymizer;
 use report_lifestory\local\text_normalizer;
 
 /**
@@ -38,6 +39,10 @@ class client {
      * @return string The AI response text.
      */
     public static function send_to_ai(array $payload): string {
+        $anonymized = payload_anonymizer::anonymize($payload);
+        $payload = $anonymized['payload'];
+        $replacements = $anonymized['replacements'];
+
         $payload = text_normalizer::normalize_payload($payload);
 
         $client = new ai_services_api();
@@ -45,7 +50,7 @@ class client {
         $response = $client->request('POST', '/story/analysis', $payload);
 
         if (is_array($response) && isset($response['reply']) && is_string($response['reply'])) {
-            return $response['reply'];
+            return payload_anonymizer::deanonymize_text($response['reply'], $replacements);
         }
 
         return get_string('noresponse', 'report_lifestory');

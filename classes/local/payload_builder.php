@@ -15,7 +15,7 @@
 // along with Moodle.  If not, see <https://www.gnu.org/licenses/>.
 
 /**
- * Plugin administration pages are defined here.
+ * Student payload builder for report_lifestory.
  *
  * @package     report_lifestory
  * @copyright   2025 Datacurso
@@ -25,13 +25,13 @@
 namespace report_lifestory\local;
 
 /**
- * Utility functions for report_lifestory.
+ * Creates payloads for CSV export and AI requests.
  */
-class utils {
+class payload_builder {
     /**
      * Cleans and returns safe feedback text from a grade object.
      *
-     * @param stdClass|null $grade Grade record.
+     * @param \stdClass|null $grade Grade record.
      * @return string Cleaned feedback text.
      */
     private static function safe_feedback($grade): string {
@@ -47,7 +47,7 @@ class utils {
      * @param int $userid Moodle user ID.
      * @return array Student data payload.
      */
-    public static function build_student_payload($userid): array {
+    public static function build(int $userid): array {
         global $DB, $CFG, $USER;
 
         $user = $DB->get_record('user', ['id' => $userid], '*', MUST_EXIST);
@@ -93,7 +93,7 @@ class utils {
                         }
 
                         $grade = \grade_grade::fetch(['itemid' => $item->id, 'userid' => $userid]);
-                        $finalgrade = $grade ? floatval($grade->finalgrade) : null;
+                        $finalgrade = $grade ? (float)$grade->finalgrade : null;
                         $range = '0-' . number_format($item->grademax, 2);
                         $percentage = ($item->grademax > 0 && $finalgrade !== null)
                             ? round(($finalgrade / $item->grademax) * 100, 2)
@@ -121,7 +121,7 @@ class utils {
 
                     if ($categoryitem) {
                         $grade = \grade_grade::fetch(['itemid' => $categoryitem->id, 'userid' => $userid]);
-                        $finalgrade = $grade ? floatval($grade->finalgrade) : null;
+                        $finalgrade = $grade ? (float)$grade->finalgrade : null;
                         $range = '0-' . number_format($categoryitem->grademax, 2);
                         $percentage = ($categoryitem->grademax > 0 && $finalgrade !== null)
                             ? round(($finalgrade / $categoryitem->grademax) * 100, 2)
@@ -163,7 +163,7 @@ class utils {
 
                     if ($item->itemtype === 'course') {
                         $grade = \grade_grade::fetch(['itemid' => $item->id, 'userid' => $userid]);
-                        $finalgrade = $grade ? floatval($grade->finalgrade) : null;
+                        $finalgrade = $grade ? (float)$grade->finalgrade : null;
                         $range = '0-' . number_format($item->grademax, 2);
                         $percentage = ($item->grademax > 0 && $finalgrade !== null)
                             ? round(($finalgrade / $item->grademax) * 100, 2)
@@ -183,7 +183,7 @@ class utils {
                     }
 
                     $grade = \grade_grade::fetch(['itemid' => $item->id, 'userid' => $userid]);
-                    $finalgrade = $grade ? floatval($grade->finalgrade) : null;
+                    $finalgrade = $grade ? (float)$grade->finalgrade : null;
                     $range = '0-' . number_format($item->grademax, 2);
                     $percentage = ($item->grademax > 0 && $finalgrade !== null)
                         ? round(($finalgrade / $item->grademax) * 100, 2)
@@ -225,7 +225,7 @@ class utils {
                 foreach ($courseitems as $item) {
                     if ($item->itemtype === 'course') {
                         $grade = \grade_grade::fetch(['itemid' => $item->id, 'userid' => $userid]);
-                        $finalgrade = $grade ? floatval($grade->finalgrade) : null;
+                        $finalgrade = $grade ? (float)$grade->finalgrade : null;
                         $range = '0-' . number_format($item->grademax, 2);
                         $percentage = ($item->grademax > 0 && $finalgrade !== null)
                             ? round(($finalgrade / $item->grademax) * 100, 2)
@@ -253,111 +253,6 @@ class utils {
             ];
         }
 
-        return $payload;
-    }
-
-    /**
-     * Exports the student payload into a downloadable CSV file.
-     *
-     * @param array $payload Student data payload.
-     * @return void
-     */
-    public static function export_to_csv(array $payload): void {
-        // Translatable CSV headers using get_string().
-        $csv = sprintf(
-            "%s,%s,%s,%s,%s,%s\n",
-            get_string('course', 'report_lifestory'),
-            get_string('section', 'report_lifestory'),
-            get_string('activity', 'report_lifestory'),
-            get_string('gradepercent', 'report_lifestory'),
-            get_string('range', 'report_lifestory'),
-            get_string('feedback', 'report_lifestory')
-        );
-
-        foreach ($payload['courses'] as $course) {
-            $coursename = $course['name'];
-
-            foreach ($course['sections'] as $section) {
-                $sectionname = $section['name'];
-
-                foreach ($section['tasks'] as $task) {
-                    $csv .= sprintf(
-                        "\"%s\",\"%s\",\"%s\",\"%s\",\"%s\",\"%s\"\n",
-                        $coursename,
-                        $sectionname,
-                        $task['name'],
-                        $task['percentage'] ?? '-',
-                        $task['range'] ?? '-',
-                        str_replace('"', '""', $task['feedback'] ?? '')
-                    );
-                }
-
-                if (!empty($section['total'])) {
-                    $total = $section['total'];
-                    $csv .= sprintf(
-                        "\"%s\",\"%s\",\"%s\",\"%s\",\"%s\",\"%s\"\n",
-                        $coursename,
-                        $sectionname,
-                        $total['name'] ?? get_string('total', 'report_lifestory'),
-                        $total['percentage'] ?? '-',
-                        $total['range'] ?? '-',
-                        str_replace('"', '""', $total['feedback'] ?? '')
-                    );
-                }
-            }
-
-            if (!empty($course['total'])) {
-                $total = $course['total'];
-                $csv .= sprintf(
-                    "\"%s\",\"%s\",\"%s\",\"%s\",\"%s\",\"%s\"\n",
-                    $coursename,
-                    '',
-                    $total['name'] ?? get_string('coursetotal', 'report_lifestory'),
-                    $total['percentage'] ?? '-',
-                    $total['range'] ?? '-',
-                    str_replace('"', '""', $total['feedback'] ?? '')
-                );
-            }
-        }
-
-        $filename = 'history_' . $payload['student_id'] . '.csv';
-        header('Content-Disposition: attachment; filename="' . $filename . '"');
-        echo $csv;
-    }
-
-    /**
-     * Mapping of accented and special characters to plain UTF-8 equivalents.
-     *
-     * @var array
-     */
-    private static $unwanted = [
-        'Á' => 'A', 'É' => 'E', 'Í' => 'I', 'Ó' => 'O', 'Ú' => 'U',
-        'á' => 'a', 'é' => 'e', 'í' => 'i', 'ó' => 'o', 'ú' => 'u',
-        'ñ' => 'n', 'Ñ' => 'N',
-    ];
-
-    /**
-     * Remove accents and special characters while keeping UTF-8.
-     *
-     * @param string $text Input text.
-     * @return string Cleaned text.
-     */
-    public static function remove_accents($text) {
-        return strtr($text, self::$unwanted);
-    }
-
-    /**
-     * Normalize the payload by iterating over all its values.
-     *
-     * @param array $payload Input array payload.
-     * @return array Normalized array.
-     */
-    public static function normalize_payload(array $payload) {
-        array_walk_recursive($payload, function (&$item) {
-            if (is_string($item)) {
-                $item = self::remove_accents($item);
-            }
-        });
         return $payload;
     }
 }

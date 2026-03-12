@@ -78,7 +78,6 @@ define(['jquery', 'core/ajax', 'core/templates', 'core/notification'],
          */
         const init = function (baseUrl) {
             const searchInput = $('#usersearch');
-            const clearButton = $('#clearsearch');
             const resultsContainer = $('#search-results');
 
             if (searchInput.length === 0) {
@@ -90,12 +89,9 @@ define(['jquery', 'core/ajax', 'core/templates', 'core/notification'],
                 const query = $(this).val().trim();
 
                 if (query.length === 0) {
-                    clearButton.hide();
                     resultsContainer.addClass('d-none').empty();
                     return;
                 }
-
-                clearButton.show();
 
                 if (searchTimeout) {
                     clearTimeout(searchTimeout);
@@ -109,15 +105,6 @@ define(['jquery', 'core/ajax', 'core/templates', 'core/notification'],
                         })
                         .catch(Notification.exception);
                 }, SEARCH_DELAY);
-            });
-
-            // Clear input
-            clearButton.on('click', function (e) {
-                e.preventDefault();
-                searchInput.val('');
-                clearButton.hide();
-                resultsContainer.addClass('d-none').empty();
-                searchInput.focus();
             });
 
             // Show results when input is focused

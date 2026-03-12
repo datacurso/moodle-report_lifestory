@@ -46,11 +46,11 @@ class provider implements
         $collection->add_external_location_link(
             'ai_provider',
             [
-                'userid'      => 'privacy:metadata:ai_provider:userid',
-                'fullname'    => 'privacy:metadata:ai_provider:fullname',
-                'courseids'   => 'privacy:metadata:ai_provider:courseids',
-                'coursenames' => 'privacy:metadata:ai_provider:coursenames',
-                'context'     => 'privacy:metadata:ai_provider:context',
+                'site_id' => 'privacy:metadata:ai_provider:siteid',
+                'userid' => 'privacy:metadata:ai_provider:userid',
+                'student_id' => 'privacy:metadata:ai_provider:studentid',
+                'student_name' => 'privacy:metadata:ai_provider:studentname',
+                'courses' => 'privacy:metadata:ai_provider:courses',
             ],
             'privacy:metadata:ai_provider'
         );

@@ -52,11 +52,11 @@ final class privacy_provider_test extends provider_testcase {
                 $fields = $item->get_privacy_fields();
 
                 // Verify expected data fields are declared.
+                $this->assertArrayHasKey('site_id', $fields);
                 $this->assertArrayHasKey('userid', $fields);
-                $this->assertArrayHasKey('fullname', $fields);
-                $this->assertArrayHasKey('courseids', $fields);
-                $this->assertArrayHasKey('coursenames', $fields);
-                $this->assertArrayHasKey('context', $fields);
+                $this->assertArrayHasKey('student_id', $fields);
+                $this->assertArrayHasKey('student_name', $fields);
+                $this->assertArrayHasKey('courses', $fields);
             }
         }
 

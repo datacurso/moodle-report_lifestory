@@ -16,6 +16,74 @@
     margin-left: 1rem;
 }
 
+a.report_lifestory-btn-csv,
+button.report_lifestory-btn-csv {
+    --bs-btn-color: #fff;
+    --bs-btn-bg: #217346;
+    --bs-btn-border-color: #1a5c38;
+    --bs-btn-hover-color: #fff;
+    --bs-btn-hover-bg: #1a5c38;
+    --bs-btn-hover-border-color: #14482c;
+    --bs-btn-focus-shadow-rgb: 33, 115, 70;
+    --bs-btn-active-color: #fff;
+    --bs-btn-active-bg: #1a5c38;
+    --bs-btn-active-border-color: #14482c;
+    background: #217346 !important;
+    background-color: #217346 !important;
+    background-image: none !important;
+    border: 1px solid #1a5c38 !important;
+    color: #fff !important;
+    display: inline-flex;
+    align-items: center;
+}
+
+a.report_lifestory-btn-csv:hover,
+a.report_lifestory-btn-csv:focus,
+a.report_lifestory-btn-csv:active,
+button.report_lifestory-btn-csv:hover,
+button.report_lifestory-btn-csv:focus,
+button.report_lifestory-btn-csv:active {
+    background: #1a5c38 !important;
+    background-color: #1a5c38 !important;
+    background-image: none !important;
+    border: 1px solid #14482c !important;
+    color: #fff !important;
+}
+
+a.report_lifestory-btn-pdf,
+button.report_lifestory-btn-pdf {
+    --bs-btn-color: #fff;
+    --bs-btn-bg: #e53935;
+    --bs-btn-border-color: #c62828;
+    --bs-btn-hover-color: #fff;
+    --bs-btn-hover-bg: #c62828;
+    --bs-btn-hover-border-color: #b71c1c;
+    --bs-btn-focus-shadow-rgb: 229, 57, 53;
+    --bs-btn-active-color: #fff;
+    --bs-btn-active-bg: #c62828;
+    --bs-btn-active-border-color: #b71c1c;
+    background: #e53935 !important;
+    background-color: #e53935 !important;
+    background-image: none !important;
+    border: 1px solid #c62828 !important;
+    color: #fff !important;
+    display: inline-flex;
+    align-items: center;
+}
+
+a.report_lifestory-btn-pdf:hover,
+a.report_lifestory-btn-pdf:focus,
+a.report_lifestory-btn-pdf:active,
+button.report_lifestory-btn-pdf:hover,
+button.report_lifestory-btn-pdf:focus,
+button.report_lifestory-btn-pdf:active {
+    background: #c62828 !important;
+    background-color: #c62828 !important;
+    background-image: none !important;
+    border: 1px solid #b71c1c !important;
+    color: #fff !important;
+}
+
 /* ====== Logo ====== */
 .report_lifestory-pluginlogo {
     max-height: 38px;

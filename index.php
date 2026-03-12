@@ -28,11 +28,17 @@ require_once($CFG->dirroot . '/grade/lib.php');
 require_once($CFG->dirroot . '/grade/report/lib.php');
 
 use report_lifestory\api\client;
-use report_lifestory\local\utils;
+use report_lifestory\local\csv_exporter;
+use report_lifestory\local\payload_builder;
+use report_lifestory\local\pdf_exporter;
+use report_lifestory\local\student_search;
+use report_lifestory\local\text_normalizer;
 
 $userid = optional_param('userid', 0, PARAM_INT);
 $courseid = optional_param('id', 0, PARAM_INT);
 $action = optional_param('action', '', PARAM_ALPHA);
+$searchvalue = optional_param('searchvalue', '', PARAM_TEXT);
+$feedbackraw = optional_param('feedbackraw', '', PARAM_RAW);
 
 require_login();
 
@@ -46,15 +52,14 @@ require_capability('report/lifestory:view', $context);
 
 // Export CSV.
 if ($userid && $action === 'csv') {
-    $payload = utils::build_student_payload($userid);
-    $payload = utils::normalize_payload($payload);
-    utils::export_to_csv($payload);
+    $payload = payload_builder::build($userid);
+    $payload = text_normalizer::normalize_payload($payload);
+    csv_exporter::export($payload);
     exit;
 }
 
 // Page configuration.
-$systemcontext = context_system::instance();
-$PAGE->set_context($systemcontext);
+$PAGE->set_context($context);
 $PAGE->set_url(new moodle_url('/report/lifestory/index.php', ['userid' => $userid, 'id' => $courseid]));
 $PAGE->set_title(get_string('lifestory', 'report_lifestory'));
 $PAGE->set_heading(get_string('lifestory', 'report_lifestory'));
@@ -67,55 +72,12 @@ $PAGE->requires->js_call_amd('report_lifestory/user_search', 'init', [
 ]);
 $PAGE->requires->css(new moodle_url('/report/lifestory/styles/history_student.css'));
 
-echo $OUTPUT->header();
-
 // Search students based on search value.
 $searchresults = [];
 $selecteduser = null;
 
-if (!empty($searchvalue)) {
-    $role = $DB->get_record('role', ['shortname' => 'student']);
-
-    if ($role) {
-        $assignments = $DB->get_records('role_assignments', ['roleid' => $role->id]);
-        $userids = array_unique(array_column($assignments, 'userid'));
-
-        if (!empty($userids)) {
-            [$insql, $inparams] = $DB->get_in_or_equal($userids, SQL_PARAMS_NAMED);
-
-            // Search by first name, last name, or email.
-            $searchsql = "id $insql AND deleted = 0 AND (
-                " . $DB->sql_like('firstname', ':search1', false) . " OR
-                " . $DB->sql_like('lastname', ':search2', false) . " OR
-                " . $DB->sql_like('email', ':search3', false) . " OR
-                " . $DB->sql_like($DB->sql_fullname(), ':search4', false) . "
-            )";
-
-            $searchparam = '%' . $DB->sql_like_escape($searchvalue) . '%';
-            $inparams['search1'] = $searchparam;
-            $inparams['search2'] = $searchparam;
-            $inparams['search3'] = $searchparam;
-            $inparams['search4'] = $searchparam;
-
-            $students = $DB->get_records_select(
-                'user',
-                $searchsql,
-                $inparams,
-                'lastname ASC, firstname ASC',
-                'id, firstname, lastname, email',
-                0,
-                10,
-            );
-
-            foreach ($students as $student) {
-                $searchresults[] = [
-                    'id' => $student->id,
-                    'fullname' => fullname($student),
-                    'email' => $student->email,
-                ];
-            }
-        }
-    }
+if ($searchvalue !== '') {
+    $searchresults = student_search::search($searchvalue);
 }
 
 // Get selected user info.
@@ -157,7 +119,7 @@ $feedbackhtml = null;
 
 if ($userid && $action === 'feedback') {
     try {
-        $payload = utils::build_student_payload($userid);
+        $payload = payload_builder::build($userid);
         $response = client::send_to_ai($payload);
 
         $replytext = '';
@@ -175,10 +137,17 @@ if ($userid && $action === 'feedback') {
             $replytext = get_string('noresponse', 'report_lifestory');
         }
 
+        $feedbackraw = $replytext;
         $feedbackhtml = html_writer::div(
             format_text($replytext, FORMAT_MARKDOWN),
             'report_lifestory-feedbackcontent bg-light p-3 rounded'
         );
+
+        $cleanurl = (new moodle_url('/report/lifestory/index.php', ['userid' => $userid, 'id' => $courseid]))->out(false);
+        $replacehistoryjs = "if (window.history && window.history.replaceState) {"
+            . " window.history.replaceState(null, document.title, '" . $cleanurl . "');"
+            . ' }';
+        $PAGE->requires->js_init_code($replacehistoryjs);
     } catch (\moodle_exception $e) {
         debugging(get_string('error_ai_service', 'report_lifestory', $e->getMessage()), DEBUG_DEVELOPER);
 
@@ -196,6 +165,23 @@ if ($userid && $action === 'feedback') {
     }
 }
 
+if ($userid && $action === 'pdf') {
+    require_sesskey();
+
+    if ($feedbackraw === '') {
+        \core\notification::add(
+            get_string('nofeedbacktopdf', 'report_lifestory'),
+            \core\output\notification::NOTIFY_WARNING
+        );
+        redirect(new moodle_url('/report/lifestory/index.php', ['userid' => $userid, 'id' => $courseid]));
+    }
+
+    $studentname = $selecteduser['fullname'] ?? (string)$userid;
+    pdf_exporter::download($studentname, $feedbackraw, $coursesdata, $userid);
+}
+
+echo $OUTPUT->header();
+
 // Render Mustache.
 $renderer = $PAGE->get_renderer('core');
 $headerlogo = new \report_lifestory\output\header_logo();
@@ -205,15 +191,18 @@ $cangeneratefeedback = has_capability('report/lifestory:generateaifeedback', $co
 $templatecontext = [
     'baseurl' => new moodle_url('/report/lifestory/index.php'),
     'userid' => $userid,
+    'courseid' => $courseid,
     'searchvalue' => $searchvalue,
     'searchresults' => $searchresults,
-    'hassearchresults' => !empty($searchresults),
     'selecteduser' => $selecteduser,
     'hasuser' => (bool)$userid,
     'courses' => $coursesdata,
     'feedback' => $feedbackhtml,
+    'feedbackraw' => $feedbackraw,
     'showfeedback' => !empty($feedbackhtml),
+    'canexportpdf' => $userid && !empty($feedbackhtml),
     'headerlogo' => $logocontext,
+    'sesskey' => sesskey(),
     'cangeneratefeedback' => $cangeneratefeedback,
     'alttext' => get_string('altlogo', 'report_lifestory'),
 ];

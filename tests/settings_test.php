@@ -37,7 +37,6 @@ require_once($CFG->libdir . '/adminlib.php');
  * @category  test
  */
 final class settings_test extends \advanced_testcase {
-
     /**
      * Ensures users with report capability can see the report link without site config capability.
      *

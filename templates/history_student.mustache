@@ -21,6 +21,8 @@
     * baseurl string - Base URL of the report page.
     * searchvalue string - Current search text, empty when no search was made.
     * searchresults array - Students matching the search, each with: id int, fullname string, email string.
+    * hasstoredfeedback bool - Whether stored AI feedback exists for the selected student.
+    * feedbackdateline string - Localized line stating when the feedback was generated, null when none exists.
 
     Example context (json):
     {
@@ -28,7 +30,9 @@
         "searchvalue": "Alpha",
         "searchresults": [
             { "id": 3, "fullname": "Alpha Alpine", "email": "alpha@example.com" }
-        ]
+        ],
+        "hasstoredfeedback": true,
+        "feedbackdateline": "Feedback generated on Monday, 24 August 2026, 10:00 AM"
     }
 }}
 
@@ -89,7 +93,7 @@
                     class="btn btn-primary me-2"
                     id="btn-feedback-ai">
                         <span class="me-1"><i class="fa fa-magic" aria-hidden="true"></i></span>
-                        {{#str}} generatefeedback, report_lifestory {{/str}}
+                        {{#hasstoredfeedback}}{{#str}} regeneratefeedback, report_lifestory {{/str}}{{/hasstoredfeedback}}{{^hasstoredfeedback}}{{#str}} generatefeedback, report_lifestory {{/str}}{{/hasstoredfeedback}}
                 </a>
                 {{/cangeneratefeedback}}
                 <a href="{{baseurl}}?userid={{userid}}&action=csv&sesskey={{sesskey}}"
@@ -135,6 +139,7 @@
     {{#showfeedback}}
     <div class="alert alert-info mb-4 p-3 report_lifestory-feedback">
         <h5 class="mb-3">{{#str}} feedbackfromai, report_lifestory {{/str}}</h5>
+        {{#feedbackdateline}}<p class="text-muted small mb-2">{{feedbackdateline}}</p>{{/feedbackdateline}}
         <div class="bg-light p-3 rounded mb-0 report_lifestory-feedbackcontent">
             {{{feedback}}}
         </div>

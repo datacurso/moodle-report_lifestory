@@ -49,6 +49,35 @@ class behat_report_lifestory extends behat_base {
     }
 
     /**
+     * Inserts a stored AI feedback record for the given user directly into the database.
+     *
+     * No generator exists for the report_lifestory_feedback table, so the record
+     * is written directly, mirroring the row produced by a successful AI
+     * generation for the all-courses filter.
+     *
+     * @Given /^stored life story feedback "(?P<text>[^"]*)" exists for user "(?P<username>[^"]*)"$/
+     *
+     * @param string $text The feedback text to store.
+     * @param string $username The username of the student the feedback is about.
+     * @return void
+     */
+    public function stored_life_story_feedback_exists_for_user(string $text, string $username): void {
+        global $DB;
+
+        $userid = $DB->get_field('user', 'id', ['username' => $username], MUST_EXIST);
+        $now = time();
+
+        $DB->insert_record('report_lifestory_feedback', (object) [
+            'studentid' => $userid,
+            'courseid' => 0,
+            'feedback' => $text,
+            'usermodified' => 2,
+            'timecreated' => $now,
+            'timemodified' => $now,
+        ]);
+    }
+
+    /**
      * Runs a life story student search without JavaScript.
      *
      * The search form is normally driven by the autocomplete module, so this

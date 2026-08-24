@@ -137,6 +137,8 @@ if ($userid && $action === '') {
 
 // AI Feedback.
 $feedbackhtml = null;
+$feedbackdate = null;
+$hasstoredfeedback = false;
 
 if ($userid && $action === 'feedback') {
     require_sesskey();
@@ -168,6 +170,8 @@ if ($userid && $action === 'feedback') {
             format_text($replytext, FORMAT_MARKDOWN),
             'report_lifestory-feedbackcontent bg-light p-3 rounded'
         );
+        $feedbackdate = userdate(time());
+        $hasstoredfeedback = true;
 
         $cleanurl = (new moodle_url('/report/lifestory/index.php', ['userid' => $userid, 'id' => $courseid]))->out(false);
         $replacehistoryjs = "if (window.history && window.history.replaceState) {"
@@ -188,6 +192,20 @@ if ($userid && $action === 'feedback') {
             get_string('error_airequest', 'report_lifestory', $e->getMessage()),
             \core\output\notification::NOTIFY_ERROR
         );
+    }
+}
+
+// Stored feedback: show the persisted AI feedback when no fresh generation happened.
+if ($userid && $feedbackhtml === null) {
+    $storedrecord = feedback_store::get_record($userid, $courseid);
+    if ($storedrecord) {
+        $feedbackhtml = html_writer::div(
+            format_text($storedrecord->feedback, FORMAT_MARKDOWN),
+            'report_lifestory-feedbackcontent bg-light p-3 rounded'
+        );
+        $feedbackraw = $storedrecord->feedback;
+        $feedbackdate = userdate($storedrecord->timemodified);
+        $hasstoredfeedback = true;
     }
 }
 
@@ -229,6 +247,10 @@ $templatecontext = [
     'feedback' => $feedbackhtml,
     'feedbackraw' => $feedbackraw,
     'showfeedback' => !empty($feedbackhtml),
+    'feedbackdateline' => $feedbackdate !== null
+        ? get_string('feedbackgeneratedon', 'report_lifestory', $feedbackdate)
+        : null,
+    'hasstoredfeedback' => $hasstoredfeedback,
     'canexportpdf' => $userid && !empty($feedbackhtml),
     'headerlogo' => $logocontext,
     'sesskey' => sesskey(),

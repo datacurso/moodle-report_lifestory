@@ -63,14 +63,14 @@
             {{#hasuser}}
             <div class="d-flex align-items-center gap-2 ms-3 report_lifestory-actionbuttons">
                 {{#cangeneratefeedback}}
-                <a href="{{baseurl}}?userid={{userid}}&action=feedback"
+                <a href="{{baseurl}}?userid={{userid}}&action=feedback&sesskey={{sesskey}}"
                     class="btn btn-primary me-2"
                     id="btn-feedback-ai">
                         <span class="me-1"><i class="fa fa-magic" aria-hidden="true"></i></span>
                         {{#str}} generatefeedback, report_lifestory {{/str}}
                 </a>
                 {{/cangeneratefeedback}}
-                <a href="{{baseurl}}?userid={{userid}}&action=csv"
+                <a href="{{baseurl}}?userid={{userid}}&action=csv&sesskey={{sesskey}}"
                    class="btn report_lifestory-btn-csv"
                    style="background:#217346 !important; background-color:#217346 !important; border:1px solid #1a5c38 !important; color:#fff !important;"
                    id="btn-csv-export">

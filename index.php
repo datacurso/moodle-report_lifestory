@@ -30,6 +30,7 @@ require_once($CFG->dirroot . '/grade/report/lib.php');
 use report_lifestory\api\client;
 use report_lifestory\local\course_access;
 use report_lifestory\local\csv_exporter;
+use report_lifestory\local\feedback_store;
 use report_lifestory\local\payload_builder;
 use report_lifestory\local\pdf_exporter;
 use report_lifestory\local\student_search;
@@ -152,6 +153,7 @@ if ($userid && $action === 'feedback') {
         }
 
         $feedbackraw = $replytext;
+        feedback_store::save($userid, $courseid, $replytext);
         $feedbackhtml = html_writer::div(
             format_text($replytext, FORMAT_MARKDOWN),
             'report_lifestory-feedbackcontent bg-light p-3 rounded'
@@ -182,7 +184,9 @@ if ($userid && $action === 'feedback') {
 if ($userid && $action === 'pdf') {
     require_sesskey();
 
-    if ($feedbackraw === '') {
+    $storedfeedback = feedback_store::get($userid, $courseid);
+
+    if ($storedfeedback === null || $storedfeedback === '') {
         \core\notification::add(
             get_string('nofeedbacktopdf', 'report_lifestory'),
             \core\output\notification::NOTIFY_WARNING
@@ -191,7 +195,7 @@ if ($userid && $action === 'pdf') {
     }
 
     $studentname = $selecteduser['fullname'] ?? (string)$userid;
-    pdf_exporter::download($studentname, $feedbackraw, $coursesdata, $userid);
+    pdf_exporter::download($studentname, $storedfeedback, $coursesdata, $userid);
 }
 
 echo $OUTPUT->header();

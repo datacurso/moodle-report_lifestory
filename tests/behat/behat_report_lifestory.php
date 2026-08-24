@@ -300,10 +300,42 @@ class behat_report_lifestory extends behat_base {
     }
 
     /**
+     * Expects the PDF export of a student without stored feedback to show the missing feedback notice.
+     *
+     * The PDF action is requested with the real session sesskey, so it passes
+     * the session key check and reaches the server-side feedback store lookup.
+     * No AI feedback has been stored for the student, so the page must redirect
+     * back to the report index and show the missing feedback notification,
+     * proving the export ignores any browser-supplied feedback text.
+     *
+     * @Then /^life story "pdf" action for "(?P<username>[^"]*)" with a valid sesskey shows the missing feedback notice$/
+     *
+     * @param string $username The username of the target student of the export.
+     * @return void
+     * @throws ExpectationException If the sesskey cannot be extracted or the notice is not shown.
+     */
+    public function requesting_the_life_story_pdf_action_shows_the_missing_feedback_notice(string $username): void {
+        $this->request_action_with_current_sesskey('pdf', $username);
+
+        $expectednotice = get_string('nofeedbacktopdf', 'report_lifestory');
+        $pagetext = $this->getSession()->getPage()->getText();
+
+        if (strpos($pagetext, $expectednotice) === false) {
+            throw new ExpectationException(
+                'The PDF export without stored feedback did not show the missing feedback notice.',
+                $this->getSession()
+            );
+        }
+
+        // Leave the page so the after-step exception detector sees a normal page.
+        $this->getSession()->visit($this->locate_path('/'));
+    }
+
+    /**
      * Loads the report index page, extracts the current session sesskey and
      * requests the given report action for the given target user with it.
      *
-     * @param string $action The report action to request ('csv' or 'feedback').
+     * @param string $action The report action to request (for example 'csv', 'feedback' or 'pdf').
      * @param string $username The username of the target user of the action.
      * @return void
      * @throws ExpectationException If the sesskey cannot be extracted.

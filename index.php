@@ -84,7 +84,8 @@ if ($searchvalue !== '') {
 
 // Get selected user info.
 if ($userid) {
-    $selecteduser = $DB->get_record('user', ['id' => $userid], 'id, firstname, lastname, email');
+    $namefields = implode(', ', \core_user\fields::for_name()->get_required_fields());
+    $selecteduser = $DB->get_record('user', ['id' => $userid], 'id, email, ' . $namefields);
     if ($selecteduser) {
         $selecteduser = [
             'id' => $selecteduser->id,

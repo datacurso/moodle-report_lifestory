@@ -50,8 +50,10 @@ class payload_builder {
     public static function build(int $userid): array {
         global $DB, $CFG, $USER;
 
+        require_once($CFG->libdir . '/gradelib.php');
+
         $user = $DB->get_record('user', ['id' => $userid], '*', MUST_EXIST);
-        $courses = \enrol_get_users_courses($userid);
+        $courses = course_access::filter_courses(\enrol_get_users_courses($userid), $userid);
 
         $payload = [
             'site_id' => md5($CFG->wwwroot),
@@ -152,7 +154,7 @@ class payload_builder {
             }
 
             if (!$hascategories) {
-                $items = \grade_item::fetch_all(['courseid' => $course->id]);
+                $items = \grade_item::fetch_all(['courseid' => $course->id]) ?: [];
                 $tasks = [];
                 $total = null;
 

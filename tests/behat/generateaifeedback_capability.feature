@@ -9,6 +9,13 @@ Feature: AI feedback generation in the life story report requires a dedicated ca
       | username | firstname | lastname | email                |
       | viewer1  | Vera      | Viewer   | viewer1@example.com  |
       | manager1 | Max       | Manager  | manager1@example.com |
+      | student1 | Sam       | Student  | student1@example.com |
+    And the following "courses" exist:
+      | fullname   | shortname |
+      | Course One | C1        |
+    And the following "course enrolments" exist:
+      | user     | course | role    |
+      | student1 | C1     | student |
     And the following "roles" exist:
       | shortname  | name              |
       | lifeviewer | Life story viewer |
@@ -22,13 +29,13 @@ Feature: AI feedback generation in the life story report requires a dedicated ca
 
   Scenario: A view-only user does not see the generate button and the forced action is denied
     Given I log in as "viewer1"
-    When I view the life story report for user "manager1"
+    When I view the life story report for user "student1"
     Then I should see "Export to CSV"
     And I should not see "Generate AI feedback"
-    And requesting the life story AI feedback action with a valid sesskey should be denied by missing capability
+    And requesting the life story AI feedback action for user "student1" with a valid sesskey should be denied by missing capability
 
   Scenario: A user with the generation capability passes the server-side permission gate
     Given I log in as "manager1"
-    When I view the life story report for user "viewer1"
+    When I view the life story report for user "student1"
     Then I should see "Generate AI feedback"
-    And requesting the life story AI feedback action with a valid sesskey should pass the permission gate
+    And requesting the life story AI feedback action for user "student1" with a valid sesskey should pass the permission gate

@@ -79,15 +79,23 @@ class behat_report_lifestory extends behat_base {
      * performs the visit and the assertion itself and then navigates away to a
      * clean page before it finishes.
      *
-     * @Then /^requesting the life story "(?P<action>csv|feedback)" action without a valid sesskey should be rejected$/
+     * @Then /^requesting the life story "(?P<action>csv|feedback)" action for user "(?P<username>[^"]*)" without a valid sesskey should be rejected$/
      *
      * @param string $action The report action to request ('csv' or 'feedback').
+     * @param string $username The username of the target user of the action.
      * @return void
      * @throws ExpectationException If the invalid sesskey error is not shown.
      */
-    public function requesting_the_life_story_action_without_a_valid_sesskey_should_be_rejected(string $action): void {
+    public function requesting_the_life_story_action_without_a_valid_sesskey_should_be_rejected(
+        string $action,
+        string $username
+    ): void {
+        global $DB;
+
+        $userid = $DB->get_field('user', 'id', ['username' => $username], MUST_EXIST);
+
         $url = new moodle_url('/report/lifestory/index.php', [
-            'userid' => 2,
+            'userid' => $userid,
             'action' => $action,
             'sesskey' => 'invalidsesskey',
         ]);
@@ -121,13 +129,16 @@ class behat_report_lifestory extends behat_base {
      * performs the visit and the assertion itself and then navigates away to a
      * clean page before it finishes.
      *
-     * @Then /^requesting the life story AI feedback action with a valid sesskey should be denied by missing capability$/
+     * @Then /^requesting the life story AI feedback action for user "(?P<username>[^"]*)" with a valid sesskey should be denied by missing capability$/
      *
+     * @param string $username The username of the target user of the action.
      * @return void
      * @throws ExpectationException If the sesskey cannot be extracted or the permissions error is not shown.
      */
-    public function requesting_the_life_story_ai_feedback_action_should_be_denied_by_missing_capability(): void {
-        $this->request_feedback_action_with_current_sesskey();
+    public function requesting_the_life_story_ai_feedback_action_should_be_denied_by_missing_capability(
+        string $username
+    ): void {
+        $this->request_action_with_current_sesskey('feedback', $username);
 
         $expectederror = get_string(
             'nopermissions',
@@ -161,13 +172,16 @@ class behat_report_lifestory extends behat_base {
      * visit and the assertions itself and then navigates away to a clean page
      * before it finishes.
      *
-     * @Then /^requesting the life story AI feedback action with a valid sesskey should pass the permission gate$/
+     * @Then /^requesting the life story AI feedback action for user "(?P<username>[^"]*)" with a valid sesskey should pass the permission gate$/
      *
+     * @param string $username The username of the target user of the action.
      * @return void
      * @throws ExpectationException If an access error is shown or the AI client is never reached.
      */
-    public function requesting_the_life_story_ai_feedback_action_should_pass_the_permission_gate(): void {
-        $this->request_feedback_action_with_current_sesskey();
+    public function requesting_the_life_story_ai_feedback_action_should_pass_the_permission_gate(
+        string $username
+    ): void {
+        $this->request_action_with_current_sesskey('feedback', $username);
 
         $pagetext = $this->getSession()->getPage()->getText();
 
@@ -205,13 +219,100 @@ class behat_report_lifestory extends behat_base {
     }
 
     /**
-     * Loads the report index page, extracts the current session sesskey and
-     * requests the AI feedback action with it.
+     * Expects the report page to reject a target user that is not a student.
      *
+     * The report index page is visited directly with the userid of the given
+     * user. The server-side student validation must reject the request with
+     * the standard invalid user error.
+     *
+     * The resulting error page contains the fatal error marker that Moodle's
+     * after-step exception detector would report as a failure, so this step
+     * performs the visit and the assertion itself and then navigates away to a
+     * clean page before it finishes.
+     *
+     * @Then /^viewing the life story report for user "(?P<username>[^"]*)" should be rejected as an invalid selection$/
+     *
+     * @param string $username The username of the non-student target user.
+     * @return void
+     * @throws ExpectationException If the invalid user error is not shown.
+     */
+    public function viewing_the_life_story_report_should_be_rejected_as_an_invalid_selection(string $username): void {
+        global $DB;
+
+        $userid = $DB->get_field('user', 'id', ['username' => $username], MUST_EXIST);
+
+        $url = new moodle_url('/report/lifestory/index.php', ['userid' => $userid]);
+
+        $this->getSession()->visit($this->locate_path($url->out_as_local_url(false)));
+
+        $expectederror = get_string('invaliduser', 'error');
+        $pagetext = $this->getSession()->getPage()->getText();
+
+        if (strpos($pagetext, $expectederror) === false) {
+            throw new ExpectationException(
+                'Viewing the report for "' . $username . '" was not rejected: the invalid user error was not shown.',
+                $this->getSession()
+            );
+        }
+
+        // Leave the error page so the after-step exception detector sees a normal page.
+        $this->getSession()->visit($this->locate_path('/'));
+    }
+
+    /**
+     * Expects a forced report action on a non-student target to be rejected.
+     *
+     * The action is requested with the real session sesskey, so it passes the
+     * session key check and reaches the server-side student validation, which
+     * must reject the request with the standard invalid user error.
+     *
+     * The resulting error page contains the fatal error marker that Moodle's
+     * after-step exception detector would report as a failure, so this step
+     * performs the visit and the assertion itself and then navigates away to a
+     * clean page before it finishes.
+     *
+     * @Then /^requesting the life story "(?P<action>csv|feedback)" action for user "(?P<username>[^"]*)" with a valid sesskey should be rejected as an invalid selection$/
+     *
+     * @param string $action The report action to request ('csv' or 'feedback').
+     * @param string $username The username of the non-student target user.
+     * @return void
+     * @throws ExpectationException If the sesskey cannot be extracted or the invalid user error is not shown.
+     */
+    public function requesting_the_life_story_action_should_be_rejected_as_an_invalid_selection(
+        string $action,
+        string $username
+    ): void {
+        $this->request_action_with_current_sesskey($action, $username);
+
+        $expectederror = get_string('invaliduser', 'error');
+        $pagetext = $this->getSession()->getPage()->getText();
+
+        if (strpos($pagetext, $expectederror) === false) {
+            throw new ExpectationException(
+                'The "' . $action . '" action for "' . $username . '" was not rejected: '
+                    . 'the invalid user error was not shown.',
+                $this->getSession()
+            );
+        }
+
+        // Leave the error page so the after-step exception detector sees a normal page.
+        $this->getSession()->visit($this->locate_path('/'));
+    }
+
+    /**
+     * Loads the report index page, extracts the current session sesskey and
+     * requests the given report action for the given target user with it.
+     *
+     * @param string $action The report action to request ('csv' or 'feedback').
+     * @param string $username The username of the target user of the action.
      * @return void
      * @throws ExpectationException If the sesskey cannot be extracted.
      */
-    private function request_feedback_action_with_current_sesskey(): void {
+    private function request_action_with_current_sesskey(string $action, string $username): void {
+        global $DB;
+
+        $userid = $DB->get_field('user', 'id', ['username' => $username], MUST_EXIST);
+
         // Load the report index page (the user has view permission) to read the real sesskey.
         $this->getSession()->visit($this->locate_path('/report/lifestory/index.php'));
 
@@ -225,8 +326,8 @@ class behat_report_lifestory extends behat_base {
         }
 
         $url = new moodle_url('/report/lifestory/index.php', [
-            'userid' => 2,
-            'action' => 'feedback',
+            'userid' => $userid,
+            'action' => $action,
             'sesskey' => $matches[1],
         ]);
 

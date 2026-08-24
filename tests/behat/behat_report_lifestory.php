@@ -88,4 +88,129 @@ class behat_report_lifestory extends behat_base {
         // Leave the error page so the after-step exception detector sees a normal page.
         $this->getSession()->visit($this->locate_path('/'));
     }
+
+    /**
+     * Requests the AI feedback action with a valid sesskey and expects a capability denial.
+     *
+     * The current session sesskey is extracted from the report index page, so the
+     * request passes the session key check and reaches the server-side capability
+     * check. The page must show the standard missing permissions error for the
+     * generate AI feedback capability.
+     *
+     * The resulting error page contains the fatal error marker that Moodle's
+     * after-step exception detector would report as a failure, so this step
+     * performs the visit and the assertion itself and then navigates away to a
+     * clean page before it finishes.
+     *
+     * @Then /^requesting the life story AI feedback action with a valid sesskey should be denied by missing capability$/
+     *
+     * @return void
+     * @throws ExpectationException If the sesskey cannot be extracted or the permissions error is not shown.
+     */
+    public function requesting_the_life_story_ai_feedback_action_should_be_denied_by_missing_capability(): void {
+        $this->request_feedback_action_with_current_sesskey();
+
+        $expectederror = get_string(
+            'nopermissions',
+            'error',
+            get_capability_string('report/lifestory:generateaifeedback')
+        );
+        $pagetext = $this->getSession()->getPage()->getText();
+
+        if (strpos($pagetext, $expectederror) === false) {
+            throw new ExpectationException(
+                'The AI feedback action was not denied: the missing permissions error message was not shown.',
+                $this->getSession()
+            );
+        }
+
+        // Leave the error page so the after-step exception detector sees a normal page.
+        $this->getSession()->visit($this->locate_path('/'));
+    }
+
+    /**
+     * Requests the AI feedback action with a valid sesskey and expects to pass the permission gate.
+     *
+     * The current user holds the generate AI feedback capability, so the request
+     * must get past the session key and capability checks and reach the AI
+     * client. On the test site the AI provider is not configured, so the page
+     * must show the AI communication error notification instead of any access
+     * error, proving the server-side gate was crossed.
+     *
+     * The resulting page contains debugging output that Moodle's after-step
+     * exception detector would report as a failure, so this step performs the
+     * visit and the assertions itself and then navigates away to a clean page
+     * before it finishes.
+     *
+     * @Then /^requesting the life story AI feedback action with a valid sesskey should pass the permission gate$/
+     *
+     * @return void
+     * @throws ExpectationException If an access error is shown or the AI client is never reached.
+     */
+    public function requesting_the_life_story_ai_feedback_action_should_pass_the_permission_gate(): void {
+        $this->request_feedback_action_with_current_sesskey();
+
+        $pagetext = $this->getSession()->getPage()->getText();
+
+        $permissionserror = get_string(
+            'nopermissions',
+            'error',
+            get_capability_string('report/lifestory:generateaifeedback')
+        );
+        if (strpos($pagetext, $permissionserror) !== false) {
+            throw new ExpectationException(
+                'The AI feedback action was denied by the capability check for a user holding the capability.',
+                $this->getSession()
+            );
+        }
+
+        if (strpos($pagetext, get_string('invalidsesskey', 'error')) !== false) {
+            throw new ExpectationException(
+                'The AI feedback action was rejected by the sesskey check despite using the session sesskey.',
+                $this->getSession()
+            );
+        }
+
+        // The AI provider is not configured on the test site, so reaching the client
+        // surfaces the communication error notification on the report page.
+        $ainotification = trim(get_string('error_airequest', 'report_lifestory', ''));
+        if (strpos($pagetext, $ainotification) === false) {
+            throw new ExpectationException(
+                'The AI communication error notification was not shown: the request may not have reached the AI client.',
+                $this->getSession()
+            );
+        }
+
+        // Leave the page so the after-step exception detector sees a normal page.
+        $this->getSession()->visit($this->locate_path('/'));
+    }
+
+    /**
+     * Loads the report index page, extracts the current session sesskey and
+     * requests the AI feedback action with it.
+     *
+     * @return void
+     * @throws ExpectationException If the sesskey cannot be extracted.
+     */
+    private function request_feedback_action_with_current_sesskey(): void {
+        // Load the report index page (the user has view permission) to read the real sesskey.
+        $this->getSession()->visit($this->locate_path('/report/lifestory/index.php'));
+
+        $content = $this->getSession()->getPage()->getContent();
+
+        if (!preg_match('/"sesskey":"([a-zA-Z0-9]+)"/', $content, $matches)) {
+            throw new ExpectationException(
+                'Could not extract the current session sesskey from the report index page.',
+                $this->getSession()
+            );
+        }
+
+        $url = new moodle_url('/report/lifestory/index.php', [
+            'userid' => 2,
+            'action' => 'feedback',
+            'sesskey' => $matches[1],
+        ]);
+
+        $this->getSession()->visit($this->locate_path($url->out_as_local_url(false)));
+    }
 }

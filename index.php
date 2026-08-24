@@ -122,6 +122,7 @@ $feedbackhtml = null;
 
 if ($userid && $action === 'feedback') {
     require_sesskey();
+    require_capability('report/lifestory:generateaifeedback', $context);
 
     try {
         $payload = payload_builder::build($userid);

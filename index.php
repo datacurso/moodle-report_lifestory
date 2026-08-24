@@ -52,6 +52,8 @@ require_capability('report/lifestory:view', $context);
 
 // Export CSV.
 if ($userid && $action === 'csv') {
+    require_sesskey();
+
     $payload = payload_builder::build($userid);
     $payload = text_normalizer::normalize_payload($payload);
     csv_exporter::export($payload);
@@ -118,6 +120,8 @@ if ($userid) {
 $feedbackhtml = null;
 
 if ($userid && $action === 'feedback') {
+    require_sesskey();
+
     try {
         $payload = payload_builder::build($userid);
         $response = client::send_to_ai($payload);

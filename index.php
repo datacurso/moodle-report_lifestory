@@ -65,7 +65,7 @@ if ($userid && !student_search::is_student($userid)) {
 if ($userid && $action === 'csv') {
     require_sesskey();
 
-    $payload = payload_builder::build($userid);
+    $payload = payload_builder::build($userid, $courseid);
     $payload = text_normalizer::normalize_payload($payload);
     csv_exported::create_for_student($userid, $context, $courseid)->trigger();
     csv_exporter::export($payload);
@@ -81,8 +81,11 @@ $PAGE->set_heading(get_string('lifestory', 'report_lifestory'));
 $PAGE->requires->js_call_amd('gradereport_user/user', 'init');
 $PAGE->requires->js_call_amd('report_lifestory/togglecategories', 'init');
 $PAGE->requires->js_call_amd('report_lifestory/button_loader', 'init');
+// The base URL must stay free of query parameters (the search_results template
+// appends '?userid='); the course filter travels as a separate argument.
 $PAGE->requires->js_call_amd('report_lifestory/user_search', 'init', [
     (new moodle_url('/report/lifestory/index.php'))->out(false),
+    $courseid,
 ]);
 $PAGE->requires->css(new moodle_url('/report/lifestory/styles/history_student.css'));
 
@@ -145,7 +148,7 @@ if ($userid && $action === 'feedback') {
     require_capability('report/lifestory:generateaifeedback', $context);
 
     try {
-        $payload = payload_builder::build($userid);
+        $payload = payload_builder::build($userid, $courseid);
         $response = client::send_to_ai($payload);
 
         $replytext = '';

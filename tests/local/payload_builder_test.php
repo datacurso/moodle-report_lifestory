@@ -75,6 +75,31 @@ final class payload_builder_test extends \advanced_testcase {
     }
 
     /**
+     * Creates a second graded course and enrols the given student in it.
+     *
+     * @param \stdClass $student The student to enrol in the new course.
+     * @return \stdClass The created course record.
+     */
+    private function create_second_course(\stdClass $student): \stdClass {
+        $generator = $this->getDataGenerator();
+
+        $course = $generator->create_course(['fullname' => 'Course Two']);
+        $generator->enrol_user($student->id, $course->id, 'student');
+
+        $item = $generator->create_grade_item([
+            'courseid' => $course->id,
+            'itemname' => 'Second course item',
+        ]);
+        $generator->create_grade_grade([
+            'itemid' => $item->id,
+            'userid' => $student->id,
+            'grade' => 6,
+        ]);
+
+        return $course;
+    }
+
+    /**
      * Asserts every course and section total in the payload is a non-null
      * array carrying at least the name key.
      *
@@ -169,6 +194,60 @@ final class payload_builder_test extends \advanced_testcase {
 
         $this->assert_missing_total_marker($payload['courses'][0]['total']);
         $this->assert_no_null_totals($payload);
+    }
+
+    /**
+     * Ensures a course id filter limits the payload to that single course.
+     */
+    public function test_build_with_course_filter_returns_only_that_course(): void {
+        $this->resetAfterTest();
+
+        [$course1, $student] = $this->create_fixture();
+        $this->create_second_course($student);
+
+        $payload = payload_builder::build($student->id, (int)$course1->id);
+
+        $this->assertCount(1, $payload['courses']);
+        $this->assertSame($course1->fullname, $payload['courses'][0]['name']);
+    }
+
+    /**
+     * Ensures the default course id keeps every permitted course in the payload.
+     */
+    public function test_build_without_course_filter_returns_all_permitted_courses(): void {
+        $this->resetAfterTest();
+
+        [$course1, $student] = $this->create_fixture();
+        $course2 = $this->create_second_course($student);
+
+        $payload = payload_builder::build($student->id, 0);
+
+        $names = array_column($payload['courses'], 'name');
+        $this->assertCount(2, $payload['courses']);
+        $this->assertContains($course1->fullname, $names);
+        $this->assertContains($course2->fullname, $names);
+    }
+
+    /**
+     * Ensures filtering by a course the current user cannot view grades in
+     * yields an empty course list instead of leaking the course data.
+     */
+    public function test_build_with_inaccessible_course_filter_returns_no_courses(): void {
+        $this->resetAfterTest();
+
+        $generator = $this->getDataGenerator();
+
+        [$course1, $student] = $this->create_fixture();
+        $course2 = $this->create_second_course($student);
+
+        // A teacher with grade access only in the first course is the viewer.
+        $teacher = $generator->create_user();
+        $generator->enrol_user($teacher->id, $course1->id, 'editingteacher');
+        $this->setUser($teacher);
+
+        $payload = payload_builder::build($student->id, (int)$course2->id);
+
+        $this->assertSame([], $payload['courses']);
     }
 
     /**

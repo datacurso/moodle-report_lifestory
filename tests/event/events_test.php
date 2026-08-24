@@ -1,0 +1,161 @@
+<?php
+// This file is part of Moodle - http://moodle.org/.
+//
+// Moodle is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// Moodle is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
+
+/**
+ * Tests for the log events of report_lifestory.
+ *
+ * @package   report_lifestory
+ * @category  test
+ * @copyright 2026 Datacurso
+ * @license   http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ */
+
+namespace report_lifestory\event;
+
+use report_lifestory\local\feedback_store;
+
+/**
+ * Unit tests ensuring the four report actions raise events that identify both
+ * the acting user and the consulted student.
+ *
+ * @package   report_lifestory
+ * @category  test
+ * @covers    \report_lifestory\event\report_viewed
+ * @covers    \report_lifestory\event\feedback_generated
+ * @covers    \report_lifestory\event\csv_exported
+ * @covers    \report_lifestory\event\pdf_exported
+ */
+final class events_test extends \advanced_testcase {
+    /**
+     * Creates the shared fixture: an acting user, a student and a course id.
+     *
+     * @return array The student, the acting user, the system context and the course id.
+     */
+    private function prepare_fixture(): array {
+        $this->resetAfterTest();
+
+        $student = $this->getDataGenerator()->create_user();
+        $actor = $this->getDataGenerator()->create_user();
+        $course = $this->getDataGenerator()->create_course();
+        $this->setUser($actor);
+
+        return [$student, $actor, \context_system::instance(), (int) $course->id];
+    }
+
+    /**
+     * Triggers the given event inside a sink and returns the captured event.
+     *
+     * @param \core\event\base $event The event to trigger.
+     * @return \core\event\base The captured event instance.
+     */
+    private function capture_event(\core\event\base $event): \core\event\base {
+        $sink = $this->redirectEvents();
+        $event->trigger();
+        $events = $sink->get_events();
+        $sink->close();
+
+        $this->assertCount(1, $events);
+
+        return reset($events);
+    }
+
+    /**
+     * Asserts the common contract every report_lifestory event must honour.
+     *
+     * @param \core\event\base $event The captured event.
+     * @param \stdClass $student The consulted student.
+     * @param \stdClass $actor The acting user.
+     * @param \context $context The expected context.
+     * @param string $crud The expected crud value.
+     * @return void
+     */
+    private function assert_common_contract(
+        \core\event\base $event,
+        \stdClass $student,
+        \stdClass $actor,
+        \context $context,
+        string $crud
+    ): void {
+        $this->assertEquals($actor->id, $event->userid);
+        $this->assertEquals($student->id, $event->relateduserid);
+        $this->assertEquals($context->id, $event->get_context()->id);
+        $this->assertSame($crud, $event->crud);
+        $this->assertEquals(\core\event\base::LEVEL_OTHER, $event->edulevel);
+        $this->assertNotEmpty($event->get_name());
+        $this->assertStringContainsString("'{$actor->id}'", $event->get_description());
+        $this->assertStringContainsString("'{$student->id}'", $event->get_description());
+        $this->assertStringContainsString('report/lifestory', $event->get_url()->out(false));
+        $this->assertEquals($student->id, $event->get_url()->get_param('userid'));
+    }
+
+    /**
+     * Ensures the report viewed event carries the actor and the student.
+     */
+    public function test_report_viewed_event(): void {
+        [$student, $actor, $context, $courseid] = $this->prepare_fixture();
+
+        $event = $this->capture_event(report_viewed::create_for_student((int) $student->id, $context, $courseid));
+
+        $this->assertInstanceOf(report_viewed::class, $event);
+        $this->assert_common_contract($event, $student, $actor, $context, 'r');
+    }
+
+    /**
+     * Ensures the CSV exported event carries the actor and the student.
+     */
+    public function test_csv_exported_event(): void {
+        [$student, $actor, $context, $courseid] = $this->prepare_fixture();
+
+        $event = $this->capture_event(csv_exported::create_for_student((int) $student->id, $context, $courseid));
+
+        $this->assertInstanceOf(csv_exported::class, $event);
+        $this->assert_common_contract($event, $student, $actor, $context, 'r');
+    }
+
+    /**
+     * Ensures the PDF exported event carries the actor and the student.
+     */
+    public function test_pdf_exported_event(): void {
+        [$student, $actor, $context, $courseid] = $this->prepare_fixture();
+
+        $event = $this->capture_event(pdf_exported::create_for_student((int) $student->id, $context, $courseid));
+
+        $this->assertInstanceOf(pdf_exported::class, $event);
+        $this->assert_common_contract($event, $student, $actor, $context, 'r');
+    }
+
+    /**
+     * Ensures the feedback generated event references the stored feedback record.
+     */
+    public function test_feedback_generated_event(): void {
+        [$student, $actor, $context] = $this->prepare_fixture();
+
+        $feedbackid = feedback_store::save((int) $student->id, 0, 'Generated feedback text.');
+        $this->assertIsInt($feedbackid);
+
+        $event = $this->capture_event(
+            feedback_generated::create_for_student((int) $student->id, $context, 0, $feedbackid)
+        );
+
+        $this->assertInstanceOf(feedback_generated::class, $event);
+        $this->assert_common_contract($event, $student, $actor, $context, 'c');
+        $this->assertEquals($feedbackid, $event->objectid);
+        $this->assertSame('report_lifestory_feedback', $event->objecttable);
+
+        $secondid = feedback_store::save((int) $student->id, 0, 'Updated feedback text.');
+        $this->assertSame($feedbackid, $secondid);
+    }
+}

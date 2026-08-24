@@ -28,6 +28,10 @@ require_once($CFG->dirroot . '/grade/lib.php');
 require_once($CFG->dirroot . '/grade/report/lib.php');
 
 use report_lifestory\api\client;
+use report_lifestory\event\csv_exported;
+use report_lifestory\event\feedback_generated;
+use report_lifestory\event\pdf_exported;
+use report_lifestory\event\report_viewed;
 use report_lifestory\local\course_access;
 use report_lifestory\local\csv_exporter;
 use report_lifestory\local\feedback_store;
@@ -63,6 +67,7 @@ if ($userid && $action === 'csv') {
 
     $payload = payload_builder::build($userid);
     $payload = text_normalizer::normalize_payload($payload);
+    csv_exported::create_for_student($userid, $context, $courseid)->trigger();
     csv_exporter::export($payload);
     exit;
 }
@@ -126,6 +131,10 @@ if ($userid) {
     }
 }
 
+if ($userid && $action === '') {
+    report_viewed::create_for_student($userid, $context, $courseid)->trigger();
+}
+
 // AI Feedback.
 $feedbackhtml = null;
 
@@ -153,7 +162,8 @@ if ($userid && $action === 'feedback') {
         }
 
         $feedbackraw = $replytext;
-        feedback_store::save($userid, $courseid, $replytext);
+        $feedbackid = feedback_store::save($userid, $courseid, $replytext);
+        feedback_generated::create_for_student($userid, $context, $courseid, $feedbackid)->trigger();
         $feedbackhtml = html_writer::div(
             format_text($replytext, FORMAT_MARKDOWN),
             'report_lifestory-feedbackcontent bg-light p-3 rounded'
@@ -195,6 +205,7 @@ if ($userid && $action === 'pdf') {
     }
 
     $studentname = $selecteduser['fullname'] ?? (string)$userid;
+    pdf_exported::create_for_student($userid, $context, $courseid)->trigger();
     pdf_exporter::download($studentname, $storedfeedback, $coursesdata, $userid);
 }
 

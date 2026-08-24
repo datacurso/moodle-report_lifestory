@@ -38,9 +38,9 @@ class feedback_store {
      * @param int $studentid The id of the student the feedback is about.
      * @param int $courseid The course filter used for generation (0 means all courses).
      * @param string $feedback The AI-generated feedback text to store.
-     * @return void
+     * @return int The id of the stored feedback record.
      */
-    public static function save(int $studentid, int $courseid, string $feedback): void {
+    public static function save(int $studentid, int $courseid, string $feedback): int {
         global $DB, $USER;
 
         $now = time();
@@ -51,7 +51,7 @@ class feedback_store {
             $record->usermodified = $USER->id;
             $record->timemodified = $now;
             $DB->update_record('report_lifestory_feedback', $record);
-            return;
+            return (int) $record->id;
         }
 
         $record = (object) [
@@ -62,7 +62,7 @@ class feedback_store {
             'timecreated' => $now,
             'timemodified' => $now,
         ];
-        $DB->insert_record('report_lifestory_feedback', $record);
+        return (int) $DB->insert_record('report_lifestory_feedback', $record);
     }
 
     /**

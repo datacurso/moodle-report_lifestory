@@ -79,7 +79,7 @@ class behat_report_lifestory extends behat_base {
      * performs the visit and the assertion itself and then navigates away to a
      * clean page before it finishes.
      *
-     * @Then /^requesting the life story "(?P<action>csv|feedback)" action for user "(?P<username>[^"]*)" without a valid sesskey should be rejected$/
+     * @Then /^life story "(?P<action>csv|feedback)" action for "(?P<username>[^"]*)" without a valid sesskey should be rejected$/
      *
      * @param string $action The report action to request ('csv' or 'feedback').
      * @param string $username The username of the target user of the action.
@@ -129,7 +129,7 @@ class behat_report_lifestory extends behat_base {
      * performs the visit and the assertion itself and then navigates away to a
      * clean page before it finishes.
      *
-     * @Then /^requesting the life story AI feedback action for user "(?P<username>[^"]*)" with a valid sesskey should be denied by missing capability$/
+     * @Then /^life story AI feedback action for "(?P<username>[^"]*)" with a valid sesskey should be denied by missing capability$/
      *
      * @param string $username The username of the target user of the action.
      * @return void
@@ -172,7 +172,7 @@ class behat_report_lifestory extends behat_base {
      * visit and the assertions itself and then navigates away to a clean page
      * before it finishes.
      *
-     * @Then /^requesting the life story AI feedback action for user "(?P<username>[^"]*)" with a valid sesskey should pass the permission gate$/
+     * @Then /^life story AI feedback action for "(?P<username>[^"]*)" with a valid sesskey should pass the permission gate$/
      *
      * @param string $username The username of the target user of the action.
      * @return void
@@ -271,7 +271,7 @@ class behat_report_lifestory extends behat_base {
      * performs the visit and the assertion itself and then navigates away to a
      * clean page before it finishes.
      *
-     * @Then /^requesting the life story "(?P<action>csv|feedback)" action for user "(?P<username>[^"]*)" with a valid sesskey should be rejected as an invalid selection$/
+     * @Then /^life story "(?P<action>csv|feedback)" action for "(?P<username>[^"]*)" with a valid sesskey is rejected as invalid$/
      *
      * @param string $action The report action to request ('csv' or 'feedback').
      * @param string $username The username of the non-student target user.

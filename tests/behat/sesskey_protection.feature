@@ -28,8 +28,8 @@ Feature: Life story report actions are protected by the session key
 
   Scenario: AI feedback generation is rejected without a valid session key
     Given I log in as "manager1"
-    Then requesting the life story "feedback" action for user "student1" without a valid sesskey should be rejected
+    Then life story "feedback" action for "student1" without a valid sesskey should be rejected
 
   Scenario: CSV export is rejected without a valid session key
     Given I log in as "manager1"
-    Then requesting the life story "csv" action for user "student1" without a valid sesskey should be rejected
+    Then life story "csv" action for "student1" without a valid sesskey should be rejected

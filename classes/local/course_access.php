@@ -58,6 +58,35 @@ class course_access {
     }
 
     /**
+     * Returns the ids of the courses where the current user can view grades.
+     *
+     * A course qualifies when the current user holds both the
+     * gradereport/user:view and the moodle/grade:viewall capabilities in the
+     * course context, matching the strongest branch of the per-student check
+     * performed by can_view_student_grades().
+     *
+     * @return int[] Course ids, empty when the user has no qualifying course.
+     */
+    public static function grade_viewable_courseids(): array {
+        $reportcourses = get_user_capability_course('gradereport/user:view', null, true, '');
+        $viewallcourses = get_user_capability_course('moodle/grade:viewall', null, true, '');
+
+        if (empty($reportcourses) || empty($viewallcourses)) {
+            return [];
+        }
+
+        $reportids = array_map(static function ($course): int {
+            return (int)$course->id;
+        }, $reportcourses);
+
+        $viewallids = array_map(static function ($course): int {
+            return (int)$course->id;
+        }, $viewallcourses);
+
+        return array_values(array_intersect($reportids, $viewallids));
+    }
+
+    /**
      * Filters a list of courses down to those where the student's grades are visible.
      *
      * @param array $courses Course records keyed by id, as returned by enrol_get_users_courses().

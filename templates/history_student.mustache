@@ -17,8 +17,18 @@
 {{!
     @template report_lifestory/history_student
 
+    Context variables required for this template:
+    * baseurl string - Base URL of the report page.
+    * searchvalue string - Current search text, empty when no search was made.
+    * searchresults array - Students matching the search, each with: id int, fullname string, email string.
+
     Example context (json):
     {
+        "baseurl": "https://example.com/report/lifestory/index.php",
+        "searchvalue": "Alpha",
+        "searchresults": [
+            { "id": 3, "fullname": "Alpha Alpine", "email": "alpha@example.com" }
+        ]
     }
 }}
 
@@ -43,6 +53,18 @@
                              style="z-index: 1000; max-height: 300px; overflow-y: auto;">
                         </div>
                     </form>
+
+                    {{#searchvalue}}
+                    <ul class="list-unstyled mt-2 mb-0 report_lifestory-staticresults" data-region="static-search-results">
+                        {{#searchresults}}
+                        <li>
+                            <a href="{{baseurl}}?userid={{id}}" class="d-block p-2 text-decoration-none border-bottom">
+                                {{fullname}} <small class="text-muted">{{email}}</small>
+                            </a>
+                        </li>
+                        {{/searchresults}}
+                    </ul>
+                    {{/searchvalue}}
                 {{/selecteduser}}
 
                 {{#selecteduser}}

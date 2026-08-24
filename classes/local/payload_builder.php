@@ -56,7 +56,6 @@ class payload_builder {
         $courses = course_access::filter_courses(\enrol_get_users_courses($userid), $userid);
 
         $payload = [
-            'site_id' => md5($CFG->wwwroot),
             'userid' => (string)$USER->id,
             'student_id' => (string)$user->id,
             'student_name' => \fullname($user),

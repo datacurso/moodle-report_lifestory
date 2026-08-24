@@ -156,6 +156,30 @@ final class student_search_test extends \advanced_testcase {
     }
 
     /**
+     * Ensures the student role check accepts students and rejects every other
+     * kind of user, matching the criterion applied by the search SQL.
+     */
+    public function test_is_student(): void {
+        global $DB;
+
+        $this->resetAfterTest();
+
+        [$course1, $course2, $student1, $student2, $teacher] = $this->create_courses_and_users();
+
+        $manager = $this->getDataGenerator()->create_user();
+        $managerroleid = $DB->get_field('role', 'id', ['shortname' => 'manager'], MUST_EXIST);
+        role_assign($managerroleid, $manager->id, \context_system::instance()->id);
+
+        $roleless = $this->getDataGenerator()->create_user();
+
+        $this->assertTrue(student_search::is_student((int)$student1->id));
+        $this->assertFalse(student_search::is_student((int)$teacher->id));
+        $this->assertFalse(student_search::is_student((int)$manager->id));
+        $this->assertFalse(student_search::is_student((int)$roleless->id));
+        $this->assertFalse(student_search::is_student(999999));
+    }
+
+    /**
      * Ensures the external search function applies the same scoping as the
      * search helper for users holding the report view capability.
      */

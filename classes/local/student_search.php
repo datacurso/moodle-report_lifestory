@@ -98,4 +98,28 @@ class student_search {
             ];
         }, $students));
     }
+
+    /**
+     * Checks whether a user holds the student role.
+     *
+     * Applies the same student criterion as the search() SQL: the user must
+     * not be deleted and must have at least one role assignment for the role
+     * whose shortname is 'student', in any context.
+     *
+     * @param int $userid The id of the user to check.
+     * @return bool True when the user exists, is not deleted and holds the student role.
+     */
+    public static function is_student(int $userid): bool {
+        global $DB;
+
+        $sql = "SELECT 1
+                  FROM {user} u
+                  JOIN {role_assignments} ra ON ra.userid = u.id
+                  JOIN {role} r ON r.id = ra.roleid
+                 WHERE u.id = :userid
+                   AND u.deleted = 0
+                   AND r.shortname = :studentrole";
+
+        return $DB->record_exists_sql($sql, ['userid' => $userid, 'studentrole' => 'student']);
+    }
 }

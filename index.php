@@ -51,6 +51,11 @@ if ($courseid) {
 
 require_capability('report/lifestory:view', $context);
 
+// Only users holding the student role are valid report targets, matching the search criterion.
+if ($userid && !student_search::is_student($userid)) {
+    throw new moodle_exception('invaliduser', 'error');
+}
+
 // Export CSV.
 if ($userid && $action === 'csv') {
     require_sesskey();

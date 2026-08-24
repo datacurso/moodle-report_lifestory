@@ -9,6 +9,12 @@ Feature: Life story report actions are protected by the session key
       | username | firstname | lastname | email                |
       | manager1 | Max       | Manager  | manager1@example.com |
       | student1 | Sam       | Student  | student1@example.com |
+    And the following "courses" exist:
+      | fullname   | shortname |
+      | Course One | C1        |
+    And the following "course enrolments" exist:
+      | user     | course | role    |
+      | student1 | C1     | student |
     And the following "system role assigns" exist:
       | user     | role    |
       | manager1 | manager |
@@ -22,8 +28,8 @@ Feature: Life story report actions are protected by the session key
 
   Scenario: AI feedback generation is rejected without a valid session key
     Given I log in as "manager1"
-    Then requesting the life story "feedback" action without a valid sesskey should be rejected
+    Then requesting the life story "feedback" action for user "student1" without a valid sesskey should be rejected
 
   Scenario: CSV export is rejected without a valid session key
     Given I log in as "manager1"
-    Then requesting the life story "csv" action without a valid sesskey should be rejected
+    Then requesting the life story "csv" action for user "student1" without a valid sesskey should be rejected

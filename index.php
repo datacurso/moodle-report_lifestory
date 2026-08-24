@@ -28,6 +28,7 @@ require_once($CFG->dirroot . '/grade/lib.php');
 require_once($CFG->dirroot . '/grade/report/lib.php');
 
 use report_lifestory\api\client;
+use report_lifestory\local\course_access;
 use report_lifestory\local\csv_exporter;
 use report_lifestory\local\payload_builder;
 use report_lifestory\local\pdf_exporter;
@@ -100,13 +101,15 @@ $coursesdata = [];
 
 if ($userid) {
     if ($courseid) {
-        $coursesdata[] = [
-            'id' => $courseid,
-            'fullname' => get_course($courseid)->fullname,
-            'reporthtml' => report_lifestory_get_report_html($courseid, $userid),
-        ];
+        if (course_access::can_view_student_grades($courseid, $userid)) {
+            $coursesdata[] = [
+                'id' => $courseid,
+                'fullname' => get_course($courseid)->fullname,
+                'reporthtml' => report_lifestory_get_report_html($courseid, $userid),
+            ];
+        }
     } else {
-        $courses = enrol_get_users_courses($userid);
+        $courses = course_access::filter_courses(enrol_get_users_courses($userid), $userid);
         foreach ($courses as $course) {
             $coursesdata[] = [
                 'id' => $course->id,

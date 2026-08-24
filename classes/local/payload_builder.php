@@ -42,6 +42,28 @@ class payload_builder {
     }
 
     /**
+     * Builds a placeholder total object used when no total grade item exists.
+     *
+     * The external AI service requires every section and course to carry a
+     * total object, so missing totals are replaced by this marker instead of
+     * null values that would make the whole request fail.
+     *
+     * @param string $name Marker name to send instead of the grade item name.
+     * @return array Placeholder total entry with null numeric fields.
+     */
+    private static function missing_total(string $name): array {
+        return [
+            'name' => $name,
+            'calculated_weight' => null,
+            'grade' => null,
+            'range' => null,
+            'percentage' => null,
+            'feedback' => '',
+            'contribution_to_total' => null,
+        ];
+    }
+
+    /**
      * Builds the payload with all student information.
      *
      * @param int $userid Moodle user ID.
@@ -146,7 +168,7 @@ class payload_builder {
                         $sections[] = [
                             'name' => \format_string($cat->get_name(), true, ['context' => $coursecontext]),
                             'tasks' => $tasks,
-                            'total' => $total,
+                            'total' => $total ?? self::missing_total('Total not available'),
                         ];
                     }
                 }
@@ -214,7 +236,7 @@ class payload_builder {
                     $sections[] = [
                         'name' => $course->fullname,
                         'tasks' => $tasks,
-                        'total' => $total,
+                        'total' => $total ?? self::missing_total('Total not available'),
                     ];
                 }
             }
@@ -250,7 +272,7 @@ class payload_builder {
             $payload['courses'][] = [
                 'name' => $course->fullname,
                 'sections' => array_values($sections),
-                'total' => $coursetotal,
+                'total' => $coursetotal ?? self::missing_total('Total not available'),
             ];
         }
 

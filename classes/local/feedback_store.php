@@ -73,14 +73,26 @@ class feedback_store {
      * @return string|null The stored feedback text, or null when no record exists.
      */
     public static function get(int $studentid, int $courseid): ?string {
+        $record = self::get_record($studentid, $courseid);
+
+        return $record === null ? null : $record->feedback;
+    }
+
+    /**
+     * Returns the full stored feedback record for a student and course filter.
+     *
+     * @param int $studentid The id of the student the feedback is about.
+     * @param int $courseid The course filter used for generation (0 means all courses).
+     * @return \stdClass|null The stored feedback record, or null when no record exists.
+     */
+    public static function get_record(int $studentid, int $courseid): ?\stdClass {
         global $DB;
 
-        $feedback = $DB->get_field(
+        $record = $DB->get_record(
             'report_lifestory_feedback',
-            'feedback',
             ['studentid' => $studentid, 'courseid' => $courseid]
         );
 
-        return $feedback === false ? null : $feedback;
+        return $record === false ? null : $record;
     }
 }

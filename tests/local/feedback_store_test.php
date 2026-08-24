@@ -103,6 +103,59 @@ final class feedback_store_test extends \advanced_testcase {
     }
 
     /**
+     * Ensures get_record returns null when no feedback exists for the pair.
+     */
+    public function test_get_record_returns_null_when_absent(): void {
+        $this->resetAfterTest();
+        $this->setAdminUser();
+
+        $student = $this->getDataGenerator()->create_user();
+
+        $this->assertNull(feedback_store::get_record($student->id, 0));
+    }
+
+    /**
+     * Ensures get_record returns the full stored row with its timestamps.
+     */
+    public function test_get_record_returns_full_row(): void {
+        $this->resetAfterTest();
+        $this->setAdminUser();
+
+        $student = $this->getDataGenerator()->create_user();
+
+        $savedid = feedback_store::save($student->id, 0, 'Stored analysis text.');
+
+        $record = feedback_store::get_record($student->id, 0);
+
+        $this->assertNotNull($record);
+        $this->assertSame($savedid, (int) $record->id);
+        $this->assertSame('Stored analysis text.', $record->feedback);
+        $this->assertGreaterThan(0, (int) $record->timemodified);
+    }
+
+    /**
+     * Ensures a second save replaces the text and never moves timemodified backwards.
+     */
+    public function test_get_record_after_upsert_reflects_replacement(): void {
+        $this->resetAfterTest();
+        $this->setAdminUser();
+
+        $student = $this->getDataGenerator()->create_user();
+
+        feedback_store::save($student->id, 0, 'First analysis text.');
+        $first = feedback_store::get_record($student->id, 0);
+
+        $this->waitForSecond();
+
+        feedback_store::save($student->id, 0, 'Replacement analysis text.');
+        $second = feedback_store::get_record($student->id, 0);
+
+        $this->assertSame((int) $first->id, (int) $second->id);
+        $this->assertSame('Replacement analysis text.', $second->feedback);
+        $this->assertGreaterThanOrEqual((int) $first->timemodified, (int) $second->timemodified);
+    }
+
+    /**
      * Ensures the store returns null when no feedback exists for the pair.
      */
     public function test_get_returns_null_when_absent(): void {

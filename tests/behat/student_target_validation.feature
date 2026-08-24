@@ -27,11 +27,11 @@ Feature: The life story report only accepts students as target users
 
   Scenario: Forcing the CSV export action on a non-student user is rejected despite a valid session key
     Given I log in as "manager1"
-    Then requesting the life story "csv" action for user "teacher1" with a valid sesskey should be rejected as an invalid selection
+    Then life story "csv" action for "teacher1" with a valid sesskey is rejected as invalid
 
   Scenario: Forcing the AI feedback action on a non-student user is rejected despite a valid session key
     Given I log in as "manager1"
-    Then requesting the life story "feedback" action for user "teacher1" with a valid sesskey should be rejected as an invalid selection
+    Then life story "feedback" action for "teacher1" with a valid sesskey is rejected as invalid
 
   Scenario: Viewing the report for a student user keeps working
     Given I log in as "manager1"

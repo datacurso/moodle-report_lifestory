@@ -58,8 +58,8 @@ class payload_anonymizer {
         $replacements = [];
 
         // Mask the student name in feedback texts before the name field is replaced.
-        if (isset($payload['student_name']) && is_string($payload['student_name']) && $payload['student_name'] !== ''
-                && isset($payload['courses']) && is_array($payload['courses'])) {
+        $hasname = isset($payload['student_name']) && is_string($payload['student_name']) && $payload['student_name'] !== '';
+        if ($hasname && isset($payload['courses']) && is_array($payload['courses'])) {
             $payload['courses'] = self::mask_student_name_in_feedback($payload['courses'], $payload['student_name']);
         }
 

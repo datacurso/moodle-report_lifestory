@@ -32,10 +32,10 @@ Feature: AI feedback generation in the life story report requires a dedicated ca
     When I view the life story report for user "student1"
     Then I should see "Export to CSV"
     And I should not see "Generate AI feedback"
-    And requesting the life story AI feedback action for user "student1" with a valid sesskey should be denied by missing capability
+    And life story AI feedback action for "student1" with a valid sesskey should be denied by missing capability
 
   Scenario: A user with the generation capability passes the server-side permission gate
     Given I log in as "manager1"
     When I view the life story report for user "student1"
     Then I should see "Generate AI feedback"
-    And requesting the life story AI feedback action for user "student1" with a valid sesskey should pass the permission gate
+    And life story AI feedback action for "student1" with a valid sesskey should pass the permission gate

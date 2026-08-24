@@ -31,6 +31,10 @@ class student_search {
     /**
      * Search students by name or email.
      *
+     * Results are limited to students enrolled in at least one course where
+     * the current user can view grades, as decided by
+     * course_access::grade_viewable_courseids().
+     *
      * @param string $query Search text.
      * @param int $limit Max number of users to return.
      * @return array[]
@@ -43,8 +47,15 @@ class student_search {
             return [];
         }
 
+        $courseids = course_access::grade_viewable_courseids();
+        if (empty($courseids)) {
+            return [];
+        }
+
+        [$insql, $inparams] = $DB->get_in_or_equal($courseids, SQL_PARAMS_NAMED, 'cid');
+
         $searchparam = '%' . $DB->sql_like_escape($query) . '%';
-        $params = [
+        $params = $inparams + [
             'studentrole' => 'student',
             'search1' => $searchparam,
             'search2' => $searchparam,
@@ -52,12 +63,23 @@ class student_search {
             'search4' => $searchparam,
         ];
 
-        $sql = "SELECT DISTINCT u.id, u.firstname, u.lastname, u.email
+        $namefields = implode(', ', array_map(static function (string $field): string {
+            return 'u.' . $field;
+        }, \core_user\fields::for_name()->get_required_fields()));
+
+        $sql = "SELECT DISTINCT u.id, u.email, {$namefields}
                   FROM {user} u
                   JOIN {role_assignments} ra ON ra.userid = u.id
                   JOIN {role} r ON r.id = ra.roleid
                  WHERE r.shortname = :studentrole
                    AND u.deleted = 0
+                   AND EXISTS (
+                        SELECT 1
+                          FROM {user_enrolments} ue
+                          JOIN {enrol} e ON e.id = ue.enrolid
+                         WHERE ue.userid = u.id
+                           AND e.courseid $insql
+                   )
                    AND (
                         " . $DB->sql_like('u.firstname', ':search1', false) . " OR
                         " . $DB->sql_like('u.lastname', ':search2', false) . " OR

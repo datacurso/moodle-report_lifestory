@@ -49,6 +49,25 @@ class behat_report_lifestory extends behat_base {
     }
 
     /**
+     * Runs a life story student search without JavaScript.
+     *
+     * The search form is normally driven by the autocomplete module, so this
+     * step requests the report index page directly with the searchvalue
+     * parameter, exercising the server-side search and the static results
+     * list rendered by the page template.
+     *
+     * @When /^I search the life story report for "(?P<searchvalue>[^"]*)"$/
+     *
+     * @param string $searchvalue The text to search for.
+     * @return void
+     */
+    public function i_search_the_life_story_report_for(string $searchvalue): void {
+        $url = new moodle_url('/report/lifestory/index.php', ['searchvalue' => $searchvalue]);
+
+        $this->execute('behat_general::i_visit', [$url->out_as_local_url(false)]);
+    }
+
+    /**
      * Requests a life story action with an invalid sesskey and expects rejection.
      *
      * The request is sent with the current session cookies but a deliberately

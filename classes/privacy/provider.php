@@ -47,10 +47,13 @@ class provider implements
             'ai_provider',
             [
                 'site_id' => 'privacy:metadata:ai_provider:siteid',
+                'site_url' => 'privacy:metadata:ai_provider:siteurl',
                 'userid' => 'privacy:metadata:ai_provider:userid',
                 'student_id' => 'privacy:metadata:ai_provider:studentid',
                 'student_name' => 'privacy:metadata:ai_provider:studentname',
                 'courses' => 'privacy:metadata:ai_provider:courses',
+                'timezone' => 'privacy:metadata:ai_provider:timezone',
+                'lang' => 'privacy:metadata:ai_provider:lang',
             ],
             'privacy:metadata:ai_provider'
         );

@@ -45,22 +45,41 @@ final class privacy_provider_test extends provider_testcase {
         $collection = new collection('report_lifestory');
         $metadata = provider::get_metadata($collection)->get_collection();
 
-        $found = false;
+        $links = [];
         foreach ($metadata as $item) {
             if ($item->get_name() === 'ai_provider') {
-                $found = true;
-                $fields = $item->get_privacy_fields();
-
-                // Verify expected data fields are declared.
-                $this->assertArrayHasKey('site_id', $fields);
-                $this->assertArrayHasKey('userid', $fields);
-                $this->assertArrayHasKey('student_id', $fields);
-                $this->assertArrayHasKey('student_name', $fields);
-                $this->assertArrayHasKey('courses', $fields);
+                $links[] = $item;
             }
         }
 
-        $this->assertTrue($found, 'The ai_provider external location should be declared in get_metadata().');
+        $this->assertCount(1, $links, 'Exactly one ai_provider external location should be declared in get_metadata().');
+
+        $item = reset($links);
+        $this->assertInstanceOf(\core_privacy\local\metadata\types\external_location::class, $item);
+
+        $fields = $item->get_privacy_fields();
+        $expected = [
+            'site_id',
+            'site_url',
+            'userid',
+            'student_id',
+            'student_name',
+            'courses',
+            'timezone',
+            'lang',
+        ];
+        $this->assertEqualsCanonicalizing($expected, array_keys($fields));
+
+        // The summary and every field description must resolve to a real language string.
+        $stringman = get_string_manager();
+        $this->assertTrue($stringman->string_exists($item->get_summary(), 'report_lifestory'));
+        foreach ($fields as $field => $identifier) {
+            $this->assertTrue(
+                $stringman->string_exists($identifier, 'report_lifestory'),
+                "Missing language string for privacy field '{$field}'."
+            );
+            $this->assertNotEmpty(get_string($identifier, 'report_lifestory'));
+        }
     }
 
     /**

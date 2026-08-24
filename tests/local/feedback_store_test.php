@@ -59,9 +59,11 @@ final class feedback_store_test extends \advanced_testcase {
 
         $student = $this->getDataGenerator()->create_user();
 
-        feedback_store::save($student->id, 0, 'First feedback.');
-        feedback_store::save($student->id, 0, 'Updated feedback.');
+        $firstid = feedback_store::save($student->id, 0, 'First feedback.');
+        $secondid = feedback_store::save($student->id, 0, 'Updated feedback.');
 
+        $this->assertIsInt($firstid);
+        $this->assertSame($firstid, $secondid);
         $this->assertSame('Updated feedback.', feedback_store::get($student->id, 0));
         $this->assertEquals(1, $DB->count_records('report_lifestory_feedback', ['studentid' => $student->id]));
     }

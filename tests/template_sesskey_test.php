@@ -35,14 +35,14 @@ namespace report_lifestory;
  * legitimate click would be rejected.
  *
  * The subject under test is the Mustache template
- * report_lifestory/history_student, not a PHP class, hence @coversNothing.
+ * report_lifestory/history_student, not a PHP class, hence no class is
+ * declared as covered.
  *
  * @package   report_lifestory
  * @category  test
  * @coversNothing
  */
 final class template_sesskey_test extends \advanced_testcase {
-
     /**
      * Renders the history_student template with a context mirroring index.php.
      *

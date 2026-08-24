@@ -27,7 +27,6 @@ use Behat\Mink\Exception\ExpectationException;
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class behat_report_lifestory extends behat_base {
-
     /**
      * Opens the life story report page for the given user.
      *

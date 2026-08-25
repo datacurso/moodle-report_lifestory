@@ -47,6 +47,7 @@ $string['gradepercent'] = 'Nilai (%)';
 $string['lifestory'] = 'Kisah hidup siswa';
 $string['lifestory:generateaifeedback'] = 'Hasilkan umpan balik AI untuk siswa';
 $string['lifestory:view'] = 'Lihat laporan kisah hidup';
+$string['nocoursesavailable'] = 'Siswa ini tidak memiliki pendaftaran kursus yang tersedia untuk ditampilkan dalam laporan ini.';
 $string['nofeedbacktopdf'] = 'Buat umpan balik AI sebelum mengekspor PDF.';
 $string['noreportdata'] = 'Tidak ada data laporan yang tersedia.';
 $string['noresponse'] = 'Tidak ada respons yang diterima.';

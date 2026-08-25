@@ -55,6 +55,12 @@ if ($courseid) {
 
 require_capability('report/lifestory:view', $context);
 
+// A nonexistent user id is treated as no selection; the invalid-user error
+// below stays for existing users without the student role.
+if ($userid && !$DB->record_exists('user', ['id' => $userid, 'deleted' => 0])) {
+    $userid = 0;
+}
+
 // Only users holding the student role are valid report targets, matching the search criterion.
 if ($userid && !student_search::is_student($userid)) {
     throw new moodle_exception('invaliduser', 'error');
@@ -65,6 +71,13 @@ if ($userid && $action === 'csv') {
     require_sesskey();
 
     $payload = payload_builder::build($userid, $courseid);
+    if (empty($payload['courses'])) {
+        \core\notification::add(
+            get_string('nocoursesavailable', 'report_lifestory'),
+            \core\output\notification::NOTIFY_WARNING
+        );
+        redirect(new moodle_url('/report/lifestory/index.php', ['userid' => $userid, 'id' => $courseid]));
+    }
     csv_exported::create_for_student($userid, $context, $courseid)->trigger();
     csv_exporter::export($payload);
     exit;
@@ -148,8 +161,19 @@ if ($userid && $action === 'feedback') {
     require_sesskey();
     require_capability('report/lifestory:generateaifeedback', $context);
 
+    // The payload is built before the try block: a student without courses must not
+    // consume an AI call, and the guard redirect must not be swallowed by the catch
+    // blocks below when redirect() is implemented as a thrown exception.
+    $payload = payload_builder::build($userid, $courseid);
+    if (empty($payload['courses'])) {
+        \core\notification::add(
+            get_string('nocoursesavailable', 'report_lifestory'),
+            \core\output\notification::NOTIFY_WARNING
+        );
+        redirect(new moodle_url('/report/lifestory/index.php', ['userid' => $userid, 'id' => $courseid]));
+    }
+
     try {
-        $payload = payload_builder::build($userid, $courseid);
         $response = client::send_to_ai($payload);
 
         $replytext = '';
@@ -248,6 +272,7 @@ $templatecontext = [
     'searchhasmore' => $searchhasmore,
     'selecteduser' => $selecteduser,
     'hasuser' => (bool)$userid,
+    'hascourses' => !empty($coursesdata),
     'courses' => $coursesdata,
     'feedback' => $feedbackhtml,
     'feedbackraw' => $feedbackraw,

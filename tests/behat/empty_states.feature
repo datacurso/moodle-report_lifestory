@@ -1,0 +1,44 @@
+@report @report_lifestory
+Feature: The life story report degrades gracefully for empty target states
+  In order to get clear guidance instead of errors or pointless actions
+  As a manager
+  I need the report to handle nonexistent users and students without course enrolments
+
+  Background:
+    Given the following "users" exist:
+      | username | firstname | lastname   | email                |
+      | manager1 | Max       | Manager    | manager1@example.com |
+      | student1 | Sam       | Student    | student1@example.com |
+      | student2 | Cora      | Courseless | student2@example.com |
+    And the following "courses" exist:
+      | fullname   | shortname |
+      | Course One | C1        |
+    And the following "course enrolments" exist:
+      | user     | course | role    |
+      | student1 | C1     | student |
+    And the following "system role assigns" exist:
+      | user     | role    |
+      | manager1 | manager |
+      | student2 | student |
+
+  Scenario: A nonexistent user id behaves as no selection
+    Given I log in as "manager1"
+    When I view the life story report for a nonexistent user
+    Then I should see "Please select a user to view their life story"
+    And I should not see "Export to CSV"
+    And I should not see "Generate AI feedback"
+
+  Scenario: A student without course enrolments shows a clear notice
+    Given I log in as "manager1"
+    When I view the life story report for user "student2"
+    Then I should see "This student has no course enrolments available to display in this report."
+    And I should not see "Export to CSV"
+    And I should not see "Generate AI feedback"
+
+  Scenario: Forcing feedback generation for a student without courses is stopped
+    Given I log in as "manager1"
+    Then life story "feedback" action for "student2" with a valid sesskey shows no courses notice
+
+  Scenario: Forcing the CSV export for a student without courses is stopped
+    Given I log in as "manager1"
+    Then life story "csv" action for "student2" with a valid sesskey shows no courses notice

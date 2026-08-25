@@ -47,6 +47,7 @@ $string['gradepercent'] = 'Nota (%)';
 $string['lifestory'] = 'História de vida do estudante';
 $string['lifestory:generateaifeedback'] = 'Gerar feedback com IA para os estudantes';
 $string['lifestory:view'] = 'Ver relatório da história de vida';
+$string['nocoursesavailable'] = 'Este estudante não possui inscrições em cursos disponíveis para exibir neste relatório.';
 $string['nofeedbacktopdf'] = 'Gere o feedback da IA antes de exportar o PDF.';
 $string['noreportdata'] = 'Nenhum dado de relatório disponível.';
 $string['noresponse'] = 'Nenhuma resposta recebida.';

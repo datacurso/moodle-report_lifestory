@@ -47,6 +47,7 @@ $string['gradepercent'] = 'Оценка (%)';
 $string['lifestory'] = 'История жизни студента';
 $string['lifestory:generateaifeedback'] = 'Создать отзыв с помощью ИИ для студентов';
 $string['lifestory:view'] = 'Просмотр отчета об истории жизни';
+$string['nocoursesavailable'] = 'У этого студента нет доступных записей на курсы для отображения в этом отчете.';
 $string['nofeedbacktopdf'] = 'Сначала сгенерируйте отзыв ИИ перед экспортом PDF.';
 $string['noreportdata'] = 'Нет доступных данных отчета.';
 $string['noresponse'] = 'Ответ не получен.';

@@ -69,6 +69,7 @@ $string['privacy:metadata:report_lifestory_feedback:timemodified'] = 'Время
 $string['privacy:metadata:report_lifestory_feedback:usermodified'] = 'Пользователь, создавший отзыв.';
 $string['range'] = 'Диапазон';
 $string['regeneratefeedback'] = 'Повторно создать отзыв с помощью ИИ';
+$string['searchmorematches'] = 'Вашему запросу соответствует больше студентов. Уточните текст, чтобы сузить результаты.';
 $string['searchusers'] = 'Поиск пользователей';
 $string['section'] = 'Раздел';
 $string['selectuser'] = 'Пожалуйста, выберите пользователя, чтобы увидеть его историю жизни';

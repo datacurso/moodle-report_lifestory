@@ -37,19 +37,21 @@ class student_search {
      *
      * @param string $query Search text.
      * @param int $limit Max number of users to return.
-     * @return array[]
+     * @return array Array with two keys: 'students' (list of arrays with id int,
+     *               fullname string and email string) and 'hasmore' (bool, true
+     *               when more students match beyond the returned results).
      */
     public static function search(string $query, int $limit = 10): array {
         global $DB;
 
         $query = trim($query);
         if ($query === '') {
-            return [];
+            return ['students' => [], 'hasmore' => false];
         }
 
         $courseids = course_access::grade_viewable_courseids();
         if (empty($courseids)) {
-            return [];
+            return ['students' => [], 'hasmore' => false];
         }
 
         [$insql, $inparams] = $DB->get_in_or_equal($courseids, SQL_PARAMS_NAMED, 'cid');
@@ -73,6 +75,7 @@ class student_search {
                   JOIN {role} r ON r.id = ra.roleid
                  WHERE r.shortname = :studentrole
                    AND u.deleted = 0
+                   AND u.suspended = 0
                    AND EXISTS (
                         SELECT 1
                           FROM {user_enrolments} ue
@@ -88,15 +91,20 @@ class student_search {
                    )
               ORDER BY u.lastname ASC, u.firstname ASC";
 
-        $students = $DB->get_records_sql($sql, $params, 0, $limit);
+        // Fetch one extra row to detect whether more students match beyond the limit.
+        $rows = $DB->get_records_sql($sql, $params, 0, $limit + 1);
+        $hasmore = count($rows) > $limit;
+        $rows = array_slice($rows, 0, $limit);
 
-        return array_values(array_map(static function ($student): array {
+        $students = array_values(array_map(static function ($student): array {
             return [
                 'id' => (int)$student->id,
                 'fullname' => \fullname($student),
                 'email' => $student->email,
             ];
-        }, $students));
+        }, $rows));
+
+        return ['students' => $students, 'hasmore' => $hasmore];
     }
 
     /**

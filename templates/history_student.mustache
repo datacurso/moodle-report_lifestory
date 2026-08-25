@@ -22,6 +22,7 @@
     * courseid int - Course id the report is filtered by, 0 when the report covers all courses.
     * searchvalue string - Current search text, empty when no search was made.
     * searchresults array - Students matching the search, each with: id int, fullname string, email string.
+    * searchhasmore bool - Whether more students match the search beyond the listed results.
     * hasstoredfeedback bool - Whether stored AI feedback exists for the selected student.
     * feedbackdateline string - Localized line stating when the feedback was generated, null when none exists.
 
@@ -33,6 +34,7 @@
         "searchresults": [
             { "id": 3, "fullname": "Alpha Alpine", "email": "alpha@example.com" }
         ],
+        "searchhasmore": false,
         "hasstoredfeedback": true,
         "feedbackdateline": "Feedback generated on Monday, 24 August 2026, 10:00 AM"
     }
@@ -71,6 +73,9 @@
                         </li>
                         {{/searchresults}}
                     </ul>
+                    {{#searchhasmore}}
+                    <p class="text-muted small mt-1">{{#str}} searchmorematches, report_lifestory {{/str}}</p>
+                    {{/searchhasmore}}
                     {{/searchvalue}}
                 {{/selecteduser}}
 

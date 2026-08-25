@@ -69,6 +69,7 @@ $string['privacy:metadata:report_lifestory_feedback:timemodified'] = 'La date et
 $string['privacy:metadata:report_lifestory_feedback:usermodified'] = 'L’utilisateur qui a généré le retour.';
 $string['range'] = 'Plage';
 $string['regeneratefeedback'] = 'Régénérer le retour avec l’IA';
+$string['searchmorematches'] = 'D’autres étudiants correspondent à votre recherche. Affinez le texte pour réduire les résultats.';
 $string['searchusers'] = 'Rechercher des utilisateurs';
 $string['section'] = 'Section';
 $string['selectuser'] = 'Veuillez sélectionner un utilisateur pour voir son histoire de vie';

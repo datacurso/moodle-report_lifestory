@@ -69,6 +69,7 @@ $string['privacy:metadata:report_lifestory_feedback:timemodified'] = 'Der Zeitpu
 $string['privacy:metadata:report_lifestory_feedback:usermodified'] = 'Der Benutzer, der das Feedback generiert hat.';
 $string['range'] = 'Bereich';
 $string['regeneratefeedback'] = 'KI-Feedback neu generieren';
+$string['searchmorematches'] = 'Weitere Studierende entsprechen Ihrer Suche. Verfeinern Sie den Suchtext, um die Ergebnisse einzugrenzen.';
 $string['searchusers'] = 'Benutzer suchen';
 $string['section'] = 'Abschnitt';
 $string['selectuser'] = 'Bitte wählen Sie einen Benutzer, um seine Lebensgeschichte zu sehen';

@@ -69,6 +69,7 @@ $string['privacy:metadata:report_lifestory_feedback:timemodified'] = 'A data e h
 $string['privacy:metadata:report_lifestory_feedback:usermodified'] = 'O usuário que gerou o feedback.';
 $string['range'] = 'Intervalo';
 $string['regeneratefeedback'] = 'Regerar feedback com IA';
+$string['searchmorematches'] = 'Mais estudantes correspondem à sua pesquisa. Refine o texto para restringir os resultados.';
 $string['searchusers'] = 'Pesquisar usuários';
 $string['section'] = 'Seção';
 $string['selectuser'] = 'Por favor, selecione um usuário para ver sua história de vida';

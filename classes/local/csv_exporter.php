@@ -40,12 +40,15 @@ class csv_exporter {
     }
 
     /**
-     * Exports the student payload into a downloadable CSV file.
+     * Builds the CSV content for the student payload.
+     *
+     * Original UTF-8 characters are preserved as-is for all languages: no
+     * accent stripping or transliteration is applied to any field.
      *
      * @param array $payload Student data payload.
-     * @return void
+     * @return string CSV content without any byte order mark.
      */
-    public static function export(array $payload): void {
+    public static function build_csv(array $payload): string {
         $csv = sprintf(
             "%s,%s,%s,%s,%s,%s\n",
             get_string('course', 'report_lifestory'),
@@ -99,9 +102,25 @@ class csv_exporter {
             }
         }
 
+        return $csv;
+    }
+
+    /**
+     * Exports the student payload into a downloadable CSV file.
+     *
+     * The output is prefixed with a UTF-8 byte order mark, required so
+     * spreadsheet applications such as Excel detect the UTF-8 encoding and
+     * render international characters correctly.
+     *
+     * @param array $payload Student data payload.
+     * @return void
+     */
+    public static function export(array $payload): void {
+        $csv = self::build_csv($payload);
+
         $filename = 'history_' . $payload['student_id'] . '.csv';
         header('Content-Type: text/csv; charset=utf-8');
         header('Content-Disposition: attachment; filename="' . $filename . '"');
-        echo $csv;
+        echo "\xEF\xBB\xBF" . $csv;
     }
 }

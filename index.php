@@ -38,7 +38,6 @@ use report_lifestory\local\feedback_store;
 use report_lifestory\local\payload_builder;
 use report_lifestory\local\pdf_exporter;
 use report_lifestory\local\student_search;
-use report_lifestory\local\text_normalizer;
 
 $userid = optional_param('userid', 0, PARAM_INT);
 $courseid = optional_param('id', 0, PARAM_INT);
@@ -66,7 +65,6 @@ if ($userid && $action === 'csv') {
     require_sesskey();
 
     $payload = payload_builder::build($userid, $courseid);
-    $payload = text_normalizer::normalize_payload($payload);
     csv_exported::create_for_student($userid, $context, $courseid)->trigger();
     csv_exporter::export($payload);
     exit;

@@ -69,6 +69,7 @@ $string['privacy:metadata:report_lifestory_feedback:timemodified'] = 'Waktu peru
 $string['privacy:metadata:report_lifestory_feedback:usermodified'] = 'Pengguna yang menghasilkan umpan balik.';
 $string['range'] = 'Rentang';
 $string['regeneratefeedback'] = 'Hasilkan ulang umpan balik dengan AI';
+$string['searchmorematches'] = 'Lebih banyak siswa cocok dengan pencarian Anda. Persempit teks pencarian untuk membatasi hasil.';
 $string['searchusers'] = 'Cari pengguna';
 $string['section'] = 'Bagian';
 $string['selectuser'] = 'Silakan pilih pengguna untuk melihat kisah hidupnya';

@@ -89,10 +89,13 @@ $PAGE->requires->css(new moodle_url('/report/lifestory/styles/history_student.cs
 
 // Search students based on search value.
 $searchresults = [];
+$searchhasmore = false;
 $selecteduser = null;
 
 if ($searchvalue !== '') {
-    $searchresults = student_search::search($searchvalue);
+    $searchdata = student_search::search($searchvalue);
+    $searchresults = $searchdata['students'];
+    $searchhasmore = $searchdata['hasmore'];
 }
 
 // Get selected user info.
@@ -242,6 +245,7 @@ $templatecontext = [
     'courseid' => $courseid,
     'searchvalue' => $searchvalue,
     'searchresults' => $searchresults,
+    'searchhasmore' => $searchhasmore,
     'selecteduser' => $selecteduser,
     'hasuser' => (bool)$userid,
     'courses' => $coursesdata,

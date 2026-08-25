@@ -88,12 +88,13 @@ final class student_search_test extends \advanced_testcase {
 
         $this->setUser($teacher);
 
-        $results = student_search::search('Alpha');
+        $result = student_search::search('Alpha');
 
-        $this->assertCount(1, $results);
-        $this->assertSame((int)$student1->id, $results[0]['id']);
+        $this->assertCount(1, $result['students']);
+        $this->assertSame((int)$student1->id, $result['students'][0]['id']);
+        $this->assertFalse($result['hasmore']);
 
-        $this->assertSame([], student_search::search('Boreal'));
+        $this->assertSame(['students' => [], 'hasmore' => false], student_search::search('Boreal'));
     }
 
     /**
@@ -112,11 +113,12 @@ final class student_search_test extends \advanced_testcase {
 
         $this->setUser($manager);
 
-        $results = student_search::search('Alpha');
+        $result = student_search::search('Alpha');
 
-        $this->assertCount(2, $results);
-        $this->assertSame((int)$student1->id, $results[0]['id']);
-        $this->assertSame((int)$student2->id, $results[1]['id']);
+        $this->assertCount(2, $result['students']);
+        $this->assertSame((int)$student1->id, $result['students'][0]['id']);
+        $this->assertSame((int)$student2->id, $result['students'][1]['id']);
+        $this->assertFalse($result['hasmore']);
     }
 
     /**
@@ -130,7 +132,79 @@ final class student_search_test extends \advanced_testcase {
         $nobody = $this->getDataGenerator()->create_user();
         $this->setUser($nobody);
 
-        $this->assertSame([], student_search::search('Alpha'));
+        $this->assertSame(['students' => [], 'hasmore' => false], student_search::search('Alpha'));
+    }
+
+    /**
+     * Ensures the search caps the results at the limit and reports that more
+     * students match when the eleventh match falls beyond the limit.
+     */
+    public function test_search_reports_more_matches_beyond_the_limit(): void {
+        $this->resetAfterTest();
+
+        [$course1, $course2, $student1, $student2, $teacher] = $this->create_courses_and_users();
+
+        $generator = $this->getDataGenerator();
+        for ($i = 1; $i <= 11; $i++) {
+            $extra = $generator->create_user(['firstname' => 'Gamma', 'lastname' => sprintf('Match%02d', $i)]);
+            $generator->enrol_user($extra->id, $course1->id, 'student');
+        }
+
+        $this->setUser($teacher);
+
+        $result = student_search::search('Gamma');
+
+        $this->assertCount(10, $result['students']);
+        $this->assertTrue($result['hasmore']);
+    }
+
+    /**
+     * Ensures a search matching fewer students than the limit keeps the
+     * previous behaviour: all matches returned and no more-matches flag.
+     */
+    public function test_search_with_few_matches_does_not_report_more(): void {
+        $this->resetAfterTest();
+
+        [$course1, $course2, $student1, $student2, $teacher] = $this->create_courses_and_users();
+
+        $generator = $this->getDataGenerator();
+        $student3 = $generator->create_user(['firstname' => 'Alpha', 'lastname' => 'Cedar']);
+        $generator->enrol_user($student3->id, $course1->id, 'student');
+
+        $this->setUser($teacher);
+
+        $result = student_search::search('Alpha');
+
+        $this->assertCount(2, $result['students']);
+        $this->assertSame((int)$student1->id, $result['students'][0]['id']);
+        $this->assertSame((int)$student3->id, $result['students'][1]['id']);
+        $this->assertFalse($result['hasmore']);
+    }
+
+    /**
+     * Ensures suspended students never appear in the search results, even when
+     * their name matches and they are enrolled in a viewable course.
+     */
+    public function test_search_excludes_suspended_students(): void {
+        $this->resetAfterTest();
+
+        [$course1, $course2, $student1, $student2, $teacher] = $this->create_courses_and_users();
+
+        $generator = $this->getDataGenerator();
+        $suspended = $generator->create_user([
+            'firstname' => 'Alpha',
+            'lastname' => 'Suspended',
+            'suspended' => 1,
+        ]);
+        $generator->enrol_user($suspended->id, $course1->id, 'student');
+
+        $this->setUser($teacher);
+
+        $result = student_search::search('Alpha');
+
+        $this->assertCount(1, $result['students']);
+        $this->assertSame((int)$student1->id, $result['students'][0]['id']);
+        $this->assertFalse($result['hasmore']);
     }
 
     /**
@@ -188,6 +262,14 @@ final class student_search_test extends \advanced_testcase {
 
         [$course1, $course2, $student1, $student2, $teacher] = $this->create_courses_and_users();
 
+        $generator = $this->getDataGenerator();
+        $suspended = $generator->create_user([
+            'firstname' => 'Alpha',
+            'lastname' => 'Suspended',
+            'suspended' => 1,
+        ]);
+        $generator->enrol_user($suspended->id, $course1->id, 'student');
+
         $nobody = $this->getDataGenerator()->create_user();
         $this->assign_report_view_role($nobody->id);
         $this->assign_report_view_role($teacher->id);
@@ -201,6 +283,7 @@ final class student_search_test extends \advanced_testcase {
         );
 
         $this->assertSame([], $result['students']);
+        $this->assertFalse($result['hasmore']);
 
         $this->setUser($teacher);
 
@@ -211,6 +294,8 @@ final class student_search_test extends \advanced_testcase {
         );
 
         $this->assertCount(1, $result['students']);
+        $this->assertArrayHasKey('hasmore', $result);
+        $this->assertFalse($result['hasmore']);
 
         $entry = $result['students'][0];
         $this->assertSame((int)$student1->id, $entry['id']);

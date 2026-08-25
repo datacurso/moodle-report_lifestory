@@ -26,7 +26,6 @@ namespace report_lifestory\api;
 
 use aiprovider_datacurso\httpclient\ai_services_api;
 use report_lifestory\local\payload_anonymizer;
-use report_lifestory\local\text_normalizer;
 
 /**
  * Client to interact with AI services.
@@ -42,8 +41,6 @@ class client {
         $anonymized = payload_anonymizer::anonymize($payload);
         $payload = $anonymized['payload'];
         $replacements = $anonymized['replacements'];
-
-        $payload = text_normalizer::normalize_payload($payload);
 
         $client = new ai_services_api();
 

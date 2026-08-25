@@ -27,10 +27,11 @@ Feature: AI feedback generation in the life story report requires a dedicated ca
       | viewer1  | lifeviewer |
       | manager1 | manager    |
 
-  Scenario: A view-only user does not see the generate button and the forced action is denied
+  Scenario: A view-only user sees no action buttons and the forced action is denied
     Given I log in as "viewer1"
     When I view the life story report for user "student1"
-    Then I should see "Export to CSV"
+    Then I should see "This student has no course enrolments available to display in this report."
+    And I should not see "Export to CSV"
     And I should not see "Generate AI feedback"
     And life story AI feedback action for "student1" with a valid sesskey should be denied by missing capability
 

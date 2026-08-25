@@ -252,7 +252,8 @@ if ($userid && $action === 'pdf') {
 
     $studentname = $selecteduser['fullname'] ?? (string)$userid;
     pdf_exported::create_for_student($userid, $context, $courseid)->trigger();
-    pdf_exporter::download($studentname, $storedfeedback, $coursesdata, $userid);
+    $payload = payload_builder::build($userid, $courseid);
+    pdf_exporter::download($studentname, $storedfeedback, $payload, $userid);
 }
 
 echo $OUTPUT->header();

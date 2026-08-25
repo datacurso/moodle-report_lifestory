@@ -1,0 +1,176 @@
+{{!
+    This file is part of Moodle - http://moodle.org/
+
+    Moodle is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    Moodle is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
+}}
+{{!
+    @template report_lifestory/pdf_document
+
+    Simple TCPDF-compatible HTML document with the AI feedback and the student grades per course.
+    The inline style block is intentional: TCPDF does not load external stylesheets.
+
+    Context variables required for this template:
+    * title string - Document title.
+    * studentlabel string - Label shown before the student name.
+    * studentname string - Student full name.
+    * feedbacktitle string - Heading of the AI feedback block.
+    * feedbackhtml string - AI feedback already converted to safe HTML.
+    * courses array - Courses to render, each with: name string, hasdata bool, sections array, total object or null.
+      Each section has: name string, tasks array of rows, total row or null.
+      Each row has: name, calculatedweight, grade, range, percentage, feedback, contributiontototal (all strings).
+
+    Example context (json):
+    {
+        "title": "Student life story",
+        "studentlabel": "Student",
+        "studentname": "Alpha Alpine",
+        "feedbacktitle": "AI feedback",
+        "feedbackhtml": "<h2>Summary</h2><p>Consistent progress across courses.</p>",
+        "courses": [
+            {
+                "name": "Mathematics",
+                "hasdata": true,
+                "sections": [
+                    {
+                        "name": "Algebra",
+                        "tasks": [
+                            {
+                                "name": "Quiz 1",
+                                "calculatedweight": "25.00",
+                                "grade": "8.50",
+                                "range": "0-10.00",
+                                "percentage": "85.00",
+                                "feedback": "Well done",
+                                "contributiontototal": "21.25"
+                            }
+                        ],
+                        "total": {
+                            "name": "Algebra total",
+                            "calculatedweight": "-",
+                            "grade": "8.50",
+                            "range": "0-10.00",
+                            "percentage": "85.00",
+                            "feedback": "",
+                            "contributiontototal": "-"
+                        }
+                    }
+                ],
+                "total": {
+                    "name": "Course total",
+                    "calculatedweight": "-",
+                    "grade": "85.00",
+                    "range": "0-100.00",
+                    "percentage": "85.00",
+                    "feedback": "",
+                    "contributiontototal": "-"
+                }
+            },
+            {
+                "name": "History",
+                "hasdata": false,
+                "sections": [],
+                "total": null
+            }
+        ]
+    }
+}}
+<style>
+    h1 { text-align: center; }
+    h2 { margin-top: 12px; }
+    table { width: 100%; border-collapse: collapse; margin-top: 6px; margin-bottom: 12px; }
+    th, td { border: 1px solid #9aa0a6; padding: 4px; }
+    th { background-color: #f1f3f4; }
+    .total-row { font-weight: bold; }
+</style>
+<h1>{{title}}</h1>
+<p><strong>{{studentlabel}}:</strong> {{studentname}}</p>
+<h2>{{feedbacktitle}}</h2>
+<div>{{{feedbackhtml}}}</div>
+{{#courses}}
+<h2>{{name}}</h2>
+{{#hasdata}}
+{{#sections}}
+<h3>{{name}}</h3>
+<table>
+    <thead>
+        <tr>
+            <th>{{#str}} activity, report_lifestory {{/str}}</th>
+            <th>{{#str}} calculatedweight, report_lifestory {{/str}}</th>
+            <th>{{#str}} grade, report_lifestory {{/str}}</th>
+            <th>{{#str}} range, report_lifestory {{/str}}</th>
+            <th>{{#str}} percentage, report_lifestory {{/str}}</th>
+            <th>{{#str}} feedback, report_lifestory {{/str}}</th>
+            <th>{{#str}} contributiontototal, report_lifestory {{/str}}</th>
+        </tr>
+    </thead>
+    <tbody>
+        {{#tasks}}
+        <tr>
+            <td>{{name}}</td>
+            <td>{{calculatedweight}}</td>
+            <td>{{grade}}</td>
+            <td>{{range}}</td>
+            <td>{{percentage}}</td>
+            <td>{{feedback}}</td>
+            <td>{{contributiontototal}}</td>
+        </tr>
+        {{/tasks}}
+        {{#total}}
+        <tr class="total-row">
+            <td>{{name}}</td>
+            <td>{{calculatedweight}}</td>
+            <td>{{grade}}</td>
+            <td>{{range}}</td>
+            <td>{{percentage}}</td>
+            <td>{{feedback}}</td>
+            <td>{{contributiontototal}}</td>
+        </tr>
+        {{/total}}
+    </tbody>
+</table>
+{{/sections}}
+{{#total}}
+<table>
+    <thead>
+        <tr>
+            <th>{{#str}} coursetotal, report_lifestory {{/str}}</th>
+            <th>{{#str}} calculatedweight, report_lifestory {{/str}}</th>
+            <th>{{#str}} grade, report_lifestory {{/str}}</th>
+            <th>{{#str}} range, report_lifestory {{/str}}</th>
+            <th>{{#str}} percentage, report_lifestory {{/str}}</th>
+            <th>{{#str}} feedback, report_lifestory {{/str}}</th>
+            <th>{{#str}} contributiontototal, report_lifestory {{/str}}</th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr class="total-row">
+            <td>{{name}}</td>
+            <td>{{calculatedweight}}</td>
+            <td>{{grade}}</td>
+            <td>{{range}}</td>
+            <td>{{percentage}}</td>
+            <td>{{feedback}}</td>
+            <td>{{contributiontototal}}</td>
+        </tr>
+    </tbody>
+</table>
+{{/total}}
+{{/hasdata}}
+{{^hasdata}}
+<p><em>{{#str}} pdfnocoursedata, report_lifestory {{/str}}</em></p>
+{{/hasdata}}
+{{/courses}}
+{{^courses}}
+<p>{{#str}} nocoursesavailable, report_lifestory {{/str}}</p>
+{{/courses}}

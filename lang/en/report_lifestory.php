@@ -27,7 +27,9 @@ defined('MOODLE_INTERNAL') || die();
 
 $string['activity'] = 'Activity';
 $string['altlogo'] = 'Datacurso logo';
+$string['calculatedweight'] = 'Calculated weight';
 $string['clearselection'] = 'Clear selection';
+$string['contributiontototal'] = 'Contribution to course total';
 $string['course'] = 'Course';
 $string['coursetotal'] = 'Course total';
 $string['error_ai_service'] = 'AI service error: {$a}';
@@ -43,6 +45,7 @@ $string['feedbackfromai'] = 'AI feedback';
 $string['feedbackgeneratedon'] = 'Feedback generated on {$a}';
 $string['generatefeedback'] = 'Generate AI feedback';
 $string['generatingfeedback'] = 'Generating feedback';
+$string['grade'] = 'Grade';
 $string['gradepercent'] = 'Grade (%)';
 $string['lifestory'] = 'Student life story';
 $string['lifestory:generateaifeedback'] = 'Generate AI feedback for students';
@@ -51,6 +54,8 @@ $string['nocoursesavailable'] = 'This student has no course enrolments available
 $string['nofeedbacktopdf'] = 'Generate AI feedback before exporting PDF.';
 $string['noreportdata'] = 'No report data available.';
 $string['noresponse'] = 'No response received.';
+$string['pdfnocoursedata'] = 'No grade data is available for this course.';
+$string['percentage'] = 'Percentage';
 $string['pluginname'] = 'AI Student Life Story';
 $string['privacy:metadata:ai_provider'] = 'Data is sent to the Datacurso AI service to generate feedback based on the student’s academic history.';
 $string['privacy:metadata:ai_provider:courses'] = 'Structured academic history used for the analysis: course, section and activity names, grades, ranges and percentages, and teacher feedback texts with the student’s name masked by a placeholder.';

@@ -140,7 +140,7 @@ final class pdf_exporter_test extends \advanced_testcase {
         $this->assertStringContainsString('Excelente trabajo, ñandú über — très bien', $html);
         $this->assertStringContainsString('Unidad uno total', $html);
         $this->assertStringContainsString('Curso de diseño total', $html);
-        $this->assertStringContainsString('class="total-row"', $html);
+        $this->assertStringContainsString('<td style="font-weight: bold;">Unidad uno total</td>', $html);
         $this->assertStringContainsString(get_string('calculatedweight', 'report_lifestory'), $html);
         $this->assertStringContainsString(get_string('contributiontototal', 'report_lifestory'), $html);
     }

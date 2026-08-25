@@ -64,6 +64,7 @@ final class template_sesskey_test extends \advanced_testcase {
                 'email' => 'student@example.com',
             ],
             'hasuser' => true,
+            'hascourses' => true,
             'courses' => [],
             'feedback' => null,
             'feedbackraw' => '',

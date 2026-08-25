@@ -23,6 +23,7 @@
     * searchvalue string - Current search text, empty when no search was made.
     * searchresults array - Students matching the search, each with: id int, fullname string, email string.
     * searchhasmore bool - Whether more students match the search beyond the listed results.
+    * hascourses bool - Whether the selected student has at least one visible course in the report.
     * hasstoredfeedback bool - Whether stored AI feedback exists for the selected student.
     * feedbackdateline string - Localized line stating when the feedback was generated, null when none exists.
 
@@ -35,6 +36,7 @@
             { "id": 3, "fullname": "Alpha Alpine", "email": "alpha@example.com" }
         ],
         "searchhasmore": false,
+        "hascourses": true,
         "hasstoredfeedback": true,
         "feedbackdateline": "Feedback generated on Monday, 24 August 2026, 10:00 AM"
     }
@@ -95,6 +97,7 @@
             </div>
 
             {{#hasuser}}
+            {{#hascourses}}
             <div class="d-flex align-items-center gap-2 ms-3 report_lifestory-actionbuttons">
                 {{#cangeneratefeedback}}
                 <a href="{{baseurl}}?userid={{userid}}{{#courseid}}&id={{courseid}}{{/courseid}}&action=feedback&sesskey={{sesskey}}"
@@ -124,6 +127,7 @@
                 </form>
                 {{/canexportpdf}}
             </div>
+            {{/hascourses}}
             {{/hasuser}}
         </div>
 
@@ -153,6 +157,12 @@
         </div>
     </div>
     {{/showfeedback}}
+
+    {{^hascourses}}
+    <div class="alert alert-info report_lifestory-nocourses">
+        {{#str}} nocoursesavailable, report_lifestory {{/str}}
+    </div>
+    {{/hascourses}}
 
     {{#courses}}
     <div class="mb-5 report_lifestory-course">

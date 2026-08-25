@@ -73,6 +73,24 @@ class behat_report_lifestory extends behat_base {
     }
 
     /**
+     * Opens the life story report page for a user id that does not exist.
+     *
+     * A fixed very high user id is used so it can never collide with a
+     * generated user. The nonexistent id degrades to the no-selection state,
+     * so the visit lands on a normal report page that is safe for the
+     * after-step exception detector.
+     *
+     * @When /^I view the life story report for a nonexistent user$/
+     *
+     * @return void
+     */
+    public function i_view_the_life_story_report_for_a_nonexistent_user(): void {
+        $url = new moodle_url('/report/lifestory/index.php', ['userid' => 99999999]);
+
+        $this->execute('behat_general::i_visit', [$url->out_as_local_url(false)]);
+    }
+
+    /**
      * Inserts a stored AI feedback record for the given user directly into the database.
      *
      * No generator exists for the report_lifestory_feedback table, so the record
@@ -376,6 +394,39 @@ class behat_report_lifestory extends behat_base {
         if (strpos($pagetext, $expectednotice) === false) {
             throw new ExpectationException(
                 'The PDF export without stored feedback did not show the missing feedback notice.',
+                $this->getSession()
+            );
+        }
+
+        // Leave the page so the after-step exception detector sees a normal page.
+        $this->getSession()->visit($this->locate_path('/'));
+    }
+
+    /**
+     * Expects a forced report action on a student without courses to show the no courses notice.
+     *
+     * The action is requested with the real session sesskey, so it passes the
+     * session key and student validation checks and reaches the server-side
+     * payload guard. The student has no visible courses, so the action must
+     * redirect back to the report index with the no courses notification; for
+     * the feedback action this proves the AI client is never called.
+     *
+     * @Then /^life story "(?P<action>csv|feedback)" action for "(?P<username>[^"]*)" with a valid sesskey shows no courses notice$/
+     *
+     * @param string $action The report action to request ('csv' or 'feedback').
+     * @param string $username The username of the student without courses.
+     * @return void
+     * @throws ExpectationException If the sesskey cannot be extracted or the notice is not shown.
+     */
+    public function requesting_the_life_story_action_shows_the_no_courses_notice(string $action, string $username): void {
+        $this->request_action_with_current_sesskey($action, $username);
+
+        $expectednotice = get_string('nocoursesavailable', 'report_lifestory');
+        $pagetext = $this->getSession()->getPage()->getText();
+
+        if (strpos($pagetext, $expectednotice) === false) {
+            throw new ExpectationException(
+                'The "' . $action . '" action for a student without courses did not show the no courses notice.',
                 $this->getSession()
             );
         }

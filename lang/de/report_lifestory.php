@@ -47,6 +47,7 @@ $string['gradepercent'] = 'Note (%)';
 $string['lifestory'] = 'Lebensgeschichte des Studenten';
 $string['lifestory:generateaifeedback'] = 'KI-Feedback für Studierende generieren';
 $string['lifestory:view'] = 'Lebensgeschichtenbericht ansehen';
+$string['nocoursesavailable'] = 'Für diesen Studenten liegen keine Kurseinschreibungen vor, die in diesem Bericht angezeigt werden können.';
 $string['nofeedbacktopdf'] = 'Generieren Sie KI-Feedback, bevor Sie das PDF exportieren.';
 $string['noreportdata'] = 'Keine Berichts­daten verfügbar.';
 $string['noresponse'] = 'Keine Antwort erhalten.';

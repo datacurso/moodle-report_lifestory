@@ -49,6 +49,30 @@ class behat_report_lifestory extends behat_base {
     }
 
     /**
+     * Opens the life story report page for the given user filtered by a course.
+     *
+     * This navigates directly to /report/lifestory/index.php?userid=N&id=C,
+     * which is deterministic regardless of the ids assigned to generated
+     * users and courses.
+     *
+     * @Given /^I view the life story report for user "(?P<username>[^"]*)" in course "(?P<shortname>[^"]*)"$/
+     *
+     * @param string $username The username of the user whose report is viewed.
+     * @param string $shortname The shortname of the course the report is filtered by.
+     * @return void
+     */
+    public function i_view_the_life_story_report_for_user_in_course(string $username, string $shortname): void {
+        global $DB;
+
+        $userid = $DB->get_field('user', 'id', ['username' => $username], MUST_EXIST);
+        $courseid = $DB->get_field('course', 'id', ['shortname' => $shortname], MUST_EXIST);
+
+        $url = new moodle_url('/report/lifestory/index.php', ['userid' => $userid, 'id' => $courseid]);
+
+        $this->execute('behat_general::i_visit', [$url->out_as_local_url(false)]);
+    }
+
+    /**
      * Inserts a stored AI feedback record for the given user directly into the database.
      *
      * No generator exists for the report_lifestory_feedback table, so the record

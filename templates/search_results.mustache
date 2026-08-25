@@ -23,7 +23,7 @@
 }}
 
 {{#students}}
-<a href="{{baseurl}}?userid={{id}}"
+<a href="{{baseurl}}?userid={{id}}{{#courseid}}&id={{courseid}}{{/courseid}}"
    class="d-block p-2 text-decoration-none border-bottom search-item">
     <div class="d-flex align-items-center">
         {{#profileimageurl}}

@@ -66,16 +66,28 @@ class payload_builder {
     /**
      * Builds the payload with all student information.
      *
+     * The course list is always restricted to the courses where the current
+     * user can view the student's grades. When a course id is given, the
+     * payload is further limited to that single course, and only if it
+     * survived the permission filter.
+     *
      * @param int $userid Moodle user ID.
+     * @param int $courseid Course id to restrict the payload to, 0 for all permitted courses.
      * @return array Student data payload.
      */
-    public static function build(int $userid): array {
+    public static function build(int $userid, int $courseid = 0): array {
         global $DB, $CFG, $USER;
 
         require_once($CFG->libdir . '/gradelib.php');
 
         $user = $DB->get_record('user', ['id' => $userid], '*', MUST_EXIST);
         $courses = course_access::filter_courses(\enrol_get_users_courses($userid), $userid);
+
+        if ($courseid > 0) {
+            $courses = array_filter($courses, static function ($course) use ($courseid): bool {
+                return (int)$course->id === $courseid;
+            });
+        }
 
         $payload = [
             'userid' => (string)$USER->id,

@@ -19,6 +19,7 @@
 
     Context variables required for this template:
     * baseurl string - Base URL of the report page.
+    * courseid int - Course id the report is filtered by, 0 when the report covers all courses.
     * searchvalue string - Current search text, empty when no search was made.
     * searchresults array - Students matching the search, each with: id int, fullname string, email string.
     * hasstoredfeedback bool - Whether stored AI feedback exists for the selected student.
@@ -27,6 +28,7 @@
     Example context (json):
     {
         "baseurl": "https://example.com/report/lifestory/index.php",
+        "courseid": 0,
         "searchvalue": "Alpha",
         "searchresults": [
             { "id": 3, "fullname": "Alpha Alpine", "email": "alpha@example.com" }
@@ -62,7 +64,8 @@
                     <ul class="list-unstyled mt-2 mb-0 report_lifestory-staticresults" data-region="static-search-results">
                         {{#searchresults}}
                         <li>
-                            <a href="{{baseurl}}?userid={{id}}" class="d-block p-2 text-decoration-none border-bottom">
+                            <a href="{{baseurl}}?userid={{id}}{{#courseid}}&id={{courseid}}{{/courseid}}"
+                               class="d-block p-2 text-decoration-none border-bottom">
                                 {{fullname}} <small class="text-muted">{{email}}</small>
                             </a>
                         </li>
@@ -89,14 +92,14 @@
             {{#hasuser}}
             <div class="d-flex align-items-center gap-2 ms-3 report_lifestory-actionbuttons">
                 {{#cangeneratefeedback}}
-                <a href="{{baseurl}}?userid={{userid}}&action=feedback&sesskey={{sesskey}}"
+                <a href="{{baseurl}}?userid={{userid}}{{#courseid}}&id={{courseid}}{{/courseid}}&action=feedback&sesskey={{sesskey}}"
                     class="btn btn-primary me-2"
                     id="btn-feedback-ai">
                         <span class="me-1"><i class="fa fa-magic" aria-hidden="true"></i></span>
                         {{#hasstoredfeedback}}{{#str}} regeneratefeedback, report_lifestory {{/str}}{{/hasstoredfeedback}}{{^hasstoredfeedback}}{{#str}} generatefeedback, report_lifestory {{/str}}{{/hasstoredfeedback}}
                 </a>
                 {{/cangeneratefeedback}}
-                <a href="{{baseurl}}?userid={{userid}}&action=csv&sesskey={{sesskey}}"
+                <a href="{{baseurl}}?userid={{userid}}{{#courseid}}&id={{courseid}}{{/courseid}}&action=csv&sesskey={{sesskey}}"
                    class="btn report_lifestory-btn-csv"
                    style="background:#217346 !important; background-color:#217346 !important; border:1px solid #1a5c38 !important; color:#fff !important;"
                    id="btn-csv-export">

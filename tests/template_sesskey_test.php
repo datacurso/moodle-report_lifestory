@@ -80,7 +80,7 @@ final class template_sesskey_test extends \advanced_testcase {
     }
 
     /**
-     * Ensures the AI feedback and CSV export links include the session key.
+     * MDL-INT-015: The AI feedback and CSV export links include the session key.
      */
     public function test_action_links_include_sesskey_parameter(): void {
         $this->resetAfterTest(true);
@@ -107,8 +107,9 @@ final class template_sesskey_test extends \advanced_testcase {
     }
 
     /**
-     * Ensures the feedback link is hidden without the capability while the
-     * CSV export link still carries the session key.
+     * MDL-INT-014, MDL-E2E-007: The feedback link is hidden without the
+     * generation capability while the CSV export link still carries the
+     * session key.
      */
     public function test_feedback_link_hidden_without_capability_and_csv_keeps_sesskey(): void {
         $this->resetAfterTest(true);
@@ -121,5 +122,74 @@ final class template_sesskey_test extends \advanced_testcase {
 
         $this->assertSame(1, preg_match('/<a\b[^>]*id="btn-csv-export"[^>]*>/', $html, $csvmatches));
         $this->assertStringContainsString('sesskey=TESTSESSKEY123', $csvmatches[0]);
+    }
+
+    /**
+     * MDL-INT-018: With a course filter applied, the action links and the PDF
+     * form carry the course id so every action stays restricted to that course.
+     */
+    public function test_action_links_and_pdf_form_carry_course_filter(): void {
+        $this->resetAfterTest(true);
+        $this->setAdminUser();
+
+        $html = $this->render_template(['courseid' => 7, 'canexportpdf' => true]);
+
+        $this->assertSame(1, preg_match('/<a\b[^>]*id="btn-feedback-ai"[^>]*>/', $html, $feedbackmatches));
+        $this->assertMatchesRegularExpression('/userid=42&(amp;)?id=7&(amp;)?action=feedback/', $feedbackmatches[0]);
+
+        $this->assertSame(1, preg_match('/<a\b[^>]*id="btn-csv-export"[^>]*>/', $html, $csvmatches));
+        $this->assertMatchesRegularExpression('/userid=42&(amp;)?id=7&(amp;)?action=csv/', $csvmatches[0]);
+
+        $this->assertSame(1, preg_match('/<form\b[^>]*method="post"[^>]*>(.*?)<\/form>/s', $html, $formmatches));
+        $form = $formmatches[1];
+        $this->assertMatchesRegularExpression('/<input[^>]*name="id"[^>]*value="7"/', $form);
+        $this->assertMatchesRegularExpression('/<input[^>]*name="userid"[^>]*value="42"/', $form);
+        $this->assertMatchesRegularExpression('/<input[^>]*name="action"[^>]*value="pdf"/', $form);
+        $this->assertMatchesRegularExpression('/<input[^>]*name="sesskey"[^>]*value="TESTSESSKEY123"/', $form);
+        $this->assertStringContainsString('btn-pdf-export', $form);
+    }
+
+    /**
+     * MDL-INT-018: Without a course filter the action links carry no course
+     * id and the PDF form sends a zero course id.
+     */
+    public function test_action_links_without_course_filter_carry_no_course_id(): void {
+        $this->resetAfterTest(true);
+        $this->setAdminUser();
+
+        $html = $this->render_template(['courseid' => 0, 'canexportpdf' => true]);
+
+        $this->assertSame(1, preg_match('/<a\b[^>]*id="btn-csv-export"[^>]*>/', $html, $csvmatches));
+        $this->assertMatchesRegularExpression('/userid=42&(amp;)?action=csv/', $csvmatches[0]);
+        $this->assertDoesNotMatchRegularExpression('/[&?]id=/', $csvmatches[0]);
+
+        $this->assertSame(1, preg_match('/<form\b[^>]*method="post"[^>]*>(.*?)<\/form>/s', $html, $formmatches));
+        $this->assertMatchesRegularExpression('/<input[^>]*name="id"[^>]*value="0"/', $formmatches[1]);
+    }
+
+    /**
+     * MDL-INT-020: The PDF export form never carries the feedback text, even
+     * when a raw feedback value is present in the template context, so the
+     * server always uses the stored feedback.
+     */
+    public function test_pdf_form_has_no_feedback_field(): void {
+        $this->resetAfterTest(true);
+        $this->setAdminUser();
+
+        $html = $this->render_template([
+            'canexportpdf' => true,
+            'showfeedback' => true,
+            'feedback' => '<p>Rendered feedback</p>',
+            'feedbackraw' => 'RAW-FEEDBACK-MARKER-TEXT',
+        ]);
+
+        $this->assertSame(1, preg_match('/<form\b[^>]*method="post"[^>]*>(.*?)<\/form>/s', $html, $formmatches));
+        $form = $formmatches[1];
+
+        $this->assertDoesNotMatchRegularExpression('/name="feedbackraw"/', $form);
+        $this->assertDoesNotMatchRegularExpression('/name="feedback"/', $form);
+        $this->assertStringNotContainsString('RAW-FEEDBACK-MARKER-TEXT', $form);
+        $this->assertStringNotContainsString('RAW-FEEDBACK-MARKER-TEXT', $html);
+        $this->assertSame(4, preg_match_all('/<input\b[^>]*type="hidden"/', $form));
     }
 }

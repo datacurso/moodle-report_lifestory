@@ -166,14 +166,18 @@ class behat_report_lifestory extends behat_base {
      * invalid sesskey parameter, simulating a cross-site request forgery
      * attempt. The page must show the standard invalid sesskey error.
      *
+     * The PDF action is normally sent as a POST form; the page reads the action
+     * and the sesskey through optional_param(), so a GET request exercises the
+     * very same require_sesskey() guard.
+     *
      * The resulting error page contains the fatal error marker that Moodle's
      * after-step exception detector would report as a failure, so this step
      * performs the visit and the assertion itself and then navigates away to a
      * clean page before it finishes.
      *
-     * @Then /^life story "(?P<action>csv|feedback)" action for "(?P<username>[^"]*)" without a valid sesskey should be rejected$/
+     * @Then /^life story "(?P<action>csv|feedback|pdf)" action for "(?P<username>[^"]*)" without a valid sesskey should be rejected$/
      *
-     * @param string $action The report action to request ('csv' or 'feedback').
+     * @param string $action The report action to request ('csv', 'feedback' or 'pdf').
      * @param string $username The username of the target user of the action.
      * @return void
      * @throws ExpectationException If the invalid sesskey error is not shown.
@@ -221,16 +225,21 @@ class behat_report_lifestory extends behat_base {
      * performs the visit and the assertion itself and then navigates away to a
      * clean page before it finishes.
      *
-     * @Then /^life story AI feedback action for "(?P<username>[^"]*)" with a valid sesskey should be denied by missing capability$/
+     * When a course shortname is given the action is requested with the course
+     * filter applied, so the capability is evaluated in the course context.
+     *
+     * @Then /^life story AI feedback action for "(?P<username>[^"]*)"(?: in course "(?P<shortname>[^"]*)")? with a valid sesskey should be denied by missing capability$/
      *
      * @param string $username The username of the target user of the action.
+     * @param string $shortname Optional shortname of the course the report is filtered by.
      * @return void
      * @throws ExpectationException If the sesskey cannot be extracted or the permissions error is not shown.
      */
     public function requesting_the_life_story_ai_feedback_action_should_be_denied_by_missing_capability(
-        string $username
+        string $username,
+        string $shortname = ''
     ): void {
-        $this->request_action_with_current_sesskey('feedback', $username);
+        $this->request_action_with_current_sesskey('feedback', $username, $shortname);
 
         $expectederror = get_string(
             'nopermissions',
@@ -264,16 +273,21 @@ class behat_report_lifestory extends behat_base {
      * visit and the assertions itself and then navigates away to a clean page
      * before it finishes.
      *
-     * @Then /^life story AI feedback action for "(?P<username>[^"]*)" with a valid sesskey should pass the permission gate$/
+     * When a course shortname is given the action is requested with the course
+     * filter applied, so the capability is evaluated in the course context.
+     *
+     * @Then /^life story AI feedback action for "(?P<username>[^"]*)"(?: in course "(?P<shortname>[^"]*)")? with a valid sesskey should pass the permission gate$/
      *
      * @param string $username The username of the target user of the action.
+     * @param string $shortname Optional shortname of the course the report is filtered by.
      * @return void
      * @throws ExpectationException If an access error is shown or the AI client is never reached.
      */
     public function requesting_the_life_story_ai_feedback_action_should_pass_the_permission_gate(
-        string $username
+        string $username,
+        string $shortname = ''
     ): void {
-        $this->request_action_with_current_sesskey('feedback', $username);
+        $this->request_action_with_current_sesskey('feedback', $username, $shortname);
 
         $pagetext = $this->getSession()->getPage()->getText();
 
@@ -457,21 +471,98 @@ class behat_report_lifestory extends behat_base {
     }
 
     /**
+     * Expects the report page to deny a user lacking the view capability.
+     *
+     * The report index page is visited directly, optionally filtered by a
+     * course so the capability is evaluated in the course context. The page
+     * must show the standard missing permissions error for the view capability.
+     *
+     * The resulting error page contains the fatal error marker that Moodle's
+     * after-step exception detector would report as a failure, so this step
+     * performs the visit and the assertion itself and then navigates away to a
+     * clean page before it finishes.
+     *
+     * @Then /^viewing the life story report(?: filtered by course "(?P<shortname>[^"]*)")? should be denied by missing view capability$/
+     *
+     * @param string $shortname Optional shortname of the course the report is filtered by.
+     * @return void
+     * @throws ExpectationException If the permissions error is not shown.
+     */
+    public function viewing_the_life_story_report_should_be_denied_by_missing_view_capability(string $shortname = ''): void {
+        $params = [];
+        if ($shortname !== '') {
+            $params['id'] = $this->get_course_id($shortname);
+        }
+        $url = new moodle_url('/report/lifestory/index.php', $params);
+
+        $this->getSession()->visit($this->locate_path($url->out_as_local_url(false)));
+
+        $expectederror = get_string('nopermissions', 'error', get_capability_string('report/lifestory:view'));
+        $pagetext = $this->getSession()->getPage()->getText();
+
+        if (strpos($pagetext, $expectederror) === false) {
+            throw new ExpectationException(
+                'Viewing the report was not denied: the missing permissions error for the view capability was not shown.',
+                $this->getSession()
+            );
+        }
+
+        // Leave the error page so the after-step exception detector sees a normal page.
+        $this->getSession()->visit($this->locate_path('/'));
+    }
+
+    /**
+     * Clicks the generate AI feedback button while preventing the page from navigating away.
+     *
+     * The button loader module shows the loading state and then follows the
+     * button link, which on the test site ends in the AI communication error
+     * with debugging output. Removing the href right before the click keeps the
+     * loading state on screen so it can be asserted; a second click on the
+     * loading button exercises the double-submit guard.
+     *
+     * @When /^I click the life story generate feedback button without following its link$/
+     *
+     * @return void
+     */
+    public function i_click_the_life_story_generate_feedback_button_without_following_its_link(): void {
+        $this->require_javascript();
+
+        $this->ensure_element_exists('#btn-feedback-ai', 'css_element');
+
+        $this->getSession()->executeScript(
+            "var button = document.getElementById('btn-feedback-ai');"
+            . " button.removeAttribute('href');"
+            . " button.click();"
+        );
+    }
+
+    /**
      * Loads the report index page, extracts the current session sesskey and
      * requests the given report action for the given target user with it.
      *
+     * When a course shortname is given, both the index page used to read the
+     * sesskey and the action request carry the course filter, so users whose
+     * capabilities only exist in the course context can be exercised.
+     *
      * @param string $action The report action to request (for example 'csv', 'feedback' or 'pdf').
      * @param string $username The username of the target user of the action.
+     * @param string $shortname Optional shortname of the course the report is filtered by.
      * @return void
      * @throws ExpectationException If the sesskey cannot be extracted.
      */
-    private function request_action_with_current_sesskey(string $action, string $username): void {
+    private function request_action_with_current_sesskey(string $action, string $username, string $shortname = ''): void {
         global $DB;
 
         $userid = $DB->get_field('user', 'id', ['username' => $username], MUST_EXIST);
 
+        $filter = [];
+        if ($shortname !== '') {
+            $filter['id'] = $this->get_course_id($shortname);
+        }
+
         // Load the report index page (the user has view permission) to read the real sesskey.
-        $this->getSession()->visit($this->locate_path('/report/lifestory/index.php'));
+        $indexurl = new moodle_url('/report/lifestory/index.php', $filter);
+        $this->getSession()->visit($this->locate_path($indexurl->out_as_local_url(false)));
 
         $content = $this->getSession()->getPage()->getContent();
 
@@ -482,7 +573,7 @@ class behat_report_lifestory extends behat_base {
             );
         }
 
-        $url = new moodle_url('/report/lifestory/index.php', [
+        $url = new moodle_url('/report/lifestory/index.php', $filter + [
             'userid' => $userid,
             'action' => $action,
             'sesskey' => $matches[1],

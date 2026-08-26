@@ -19,6 +19,7 @@ Feature: The PDF export only uses AI feedback stored on the server
       | user     | role    |
       | manager1 | manager |
 
+  @MDL-INT-019 @MDL-INT-020
   Scenario: Exporting the PDF without server-side stored feedback shows the missing feedback notice
     Given I log in as "manager1"
     Then life story "pdf" action for "student1" with a valid sesskey shows the missing feedback notice

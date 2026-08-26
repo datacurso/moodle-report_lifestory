@@ -30,8 +30,8 @@ namespace report_lifestory\local;
  *
  * Covers the rendering of course, section, task and total rows, the dash
  * placeholder for missing numeric values, the empty course notice, the
- * markdown conversion of the AI feedback and the absence of on-screen grade
- * report artifacts.
+ * markdown conversion of the AI feedback, the absence of on-screen grade
+ * report artifacts and the construction of the download filename.
  *
  * @package   report_lifestory
  * @category  test
@@ -122,7 +122,7 @@ final class pdf_exporter_test extends \advanced_testcase {
     }
 
     /**
-     * Test that the document contains the course structure, values and totals.
+     * MDL-UNIT-024: The document contains the course structure, values and totals.
      *
      * @return void
      */
@@ -146,7 +146,35 @@ final class pdf_exporter_test extends \advanced_testcase {
     }
 
     /**
-     * Test that missing numeric values are rendered as a dash.
+     * MDL-UNIT-024: The document carries the report title, the student line
+     * and the AI feedback heading, plus every table column heading.
+     *
+     * @return void
+     */
+    public function test_build_html_renders_title_student_line_and_headings(): void {
+        $html = pdf_exporter::build_html('Alpha Alpine', 'Great progress.', self::create_payload());
+
+        $title = get_string('lifestory', 'report_lifestory');
+        $this->assertMatchesRegularExpression('/<h1[^>]*>\s*' . preg_quote($title, '/') . '\s*<\/h1>/', $html);
+        $this->assertStringContainsString(
+            '<strong>' . get_string('studentlabel', 'report_lifestory') . ':</strong> Alpha Alpine',
+            $html
+        );
+        $this->assertStringContainsString(get_string('feedbackfromai', 'report_lifestory'), $html);
+        $this->assertStringContainsString(get_string('coursetotal', 'report_lifestory'), $html);
+
+        foreach (['activity', 'calculatedweight', 'grade', 'range', 'percentage', 'feedback', 'contributiontototal'] as $key) {
+            $this->assertStringContainsString('>' . get_string($key, 'report_lifestory') . '</th>', $html);
+        }
+
+        // One heading per course and one sub heading per section.
+        $this->assertSame(1, preg_match_all('/<h2>Curso de diseño<\/h2>/', $html));
+        $this->assertSame(1, preg_match_all('/<h2>Curso vacío<\/h2>/', $html));
+        $this->assertSame(1, preg_match_all('/<h3>Unidad uno<\/h3>/', $html));
+    }
+
+    /**
+     * MDL-UNIT-024: Missing numeric values are rendered as a dash.
      *
      * @return void
      */
@@ -158,7 +186,7 @@ final class pdf_exporter_test extends \advanced_testcase {
     }
 
     /**
-     * Test that a course without grade data shows its heading and the empty notice.
+     * MDL-UNIT-024: A course without grade data shows its heading and the empty notice.
      *
      * @return void
      */
@@ -176,7 +204,7 @@ final class pdf_exporter_test extends \advanced_testcase {
     }
 
     /**
-     * Test that no on-screen grade report markup leaks into the document.
+     * MDL-UNIT-024: No on-screen grade report markup leaks into the document.
      *
      * @return void
      */
@@ -190,7 +218,7 @@ final class pdf_exporter_test extends \advanced_testcase {
     }
 
     /**
-     * Test that the feedback markdown is converted to HTML.
+     * MDL-UNIT-024: The feedback markdown is converted to HTML.
      *
      * @return void
      */
@@ -203,7 +231,7 @@ final class pdf_exporter_test extends \advanced_testcase {
     }
 
     /**
-     * Test that a payload without courses shows the no courses notice.
+     * MDL-UNIT-024: A payload without courses shows the no courses notice.
      *
      * @return void
      */
@@ -213,5 +241,66 @@ final class pdf_exporter_test extends \advanced_testcase {
 
         $this->assertStringContainsString(get_string('nocoursesavailable', 'report_lifestory'), $html);
         $this->assertStringNotContainsString('<table>', $html);
+    }
+
+    /**
+     * MDL-UNIT-025: The filename combines the report prefix, the student name
+     * with spaces replaced by underscores and the date of the given time.
+     *
+     * @return void
+     */
+    public function test_build_filename_combines_prefix_name_and_date(): void {
+        $time = 1767225600; // 2026-01-01 00:00:00 UTC.
+        // userdate() strips the leading zero of the day by default (fixday),
+        // so the date part is seven or eight digits depending on the day.
+        $date = userdate($time, '%Y%m%d');
+
+        $this->assertMatchesRegularExpression('/^\d{7,8}$/', $date);
+        $this->assertSame('lifestory_Alpha_Alpine_' . $date . '.pdf', pdf_exporter::build_filename('Alpha Alpine', $time));
+        $this->assertSame('lifestory_Alpha_Alpine_' . $date . '.pdf', pdf_exporter::build_filename('  Alpha   Alpine  ', $time));
+        $this->assertSame('lifestory_Alpha_' . $date . '.pdf', pdf_exporter::build_filename('Alpha', $time));
+
+        // The date part follows the supplied time, not the current one.
+        $othertime = $time + 10 * DAYSECS;
+        $this->assertSame(
+            'lifestory_Alpha_' . userdate($othertime, '%Y%m%d') . '.pdf',
+            pdf_exporter::build_filename('Alpha', $othertime)
+        );
+    }
+
+    /**
+     * MDL-UNIT-025: Accents and special characters are dropped from the
+     * filename so it stays safe for any file system.
+     *
+     * @return void
+     */
+    public function test_build_filename_drops_accents_and_special_characters(): void {
+        $time = 1767225600;
+        $date = userdate($time, '%Y%m%d');
+
+        $this->assertSame('lifestory_Mara_Jos_Prez_' . $date . '.pdf', pdf_exporter::build_filename('María José Pérez', $time));
+        $this->assertSame('lifestory_OConnorSmith_' . $date . '.pdf', pdf_exporter::build_filename("O'Connor/Smith", $time));
+        $this->assertSame('lifestory_Ren_Mller-Lde_' . $date . '.pdf', pdf_exporter::build_filename('René Müller-Lüde', $time));
+
+        $filename = pdf_exporter::build_filename('Ñandú "Über" <script>?*|', $time);
+        $this->assertMatchesRegularExpression('/^lifestory_[A-Za-z0-9_\-]+_\d{7,8}\.pdf$/', $filename);
+        $this->assertDoesNotMatchRegularExpression('/[\s\/\\\\:*?"<>|]/', $filename);
+    }
+
+    /**
+     * MDL-UNIT-025: A name that becomes empty after cleaning falls back to a
+     * generic token so the file is still identifiable.
+     *
+     * @return void
+     */
+    public function test_build_filename_uses_fallback_when_name_empties(): void {
+        $time = 1767225600;
+        $date = userdate($time, '%Y%m%d');
+
+        $this->assertSame('lifestory_student_' . $date . '.pdf', pdf_exporter::build_filename('', $time));
+        $this->assertSame('lifestory_student_' . $date . '.pdf', pdf_exporter::build_filename('   ', $time));
+        $this->assertSame('lifestory_student_' . $date . '.pdf', pdf_exporter::build_filename('ñ', $time));
+        $this->assertSame('lifestory_student_' . $date . '.pdf', pdf_exporter::build_filename('Оценка Успеваемости', $time));
+        $this->assertSame('lifestory_student_' . $date . '.pdf', pdf_exporter::build_filename('___---', $time));
     }
 }

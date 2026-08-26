@@ -36,9 +36,10 @@ class pdf_exporter {
      * Build a readable and safe PDF filename.
      *
      * @param string $studentname Student full name.
+     * @param int $time Timestamp used for the date part of the filename.
      * @return string
      */
-    private static function build_filename(string $studentname): string {
+    public static function build_filename(string $studentname, int $time): string {
         $name = trim($studentname);
         $name = preg_replace('/\s+/u', '_', $name);
         $name = preg_replace('/[^A-Za-z0-9_\-]/u', '', (string)$name);
@@ -48,7 +49,7 @@ class pdf_exporter {
             $name = 'student';
         }
 
-        $date = userdate(time(), '%Y%m%d');
+        $date = userdate($time, '%Y%m%d');
         return 'lifestory_' . $name . '_' . $date . '.pdf';
     }
 
@@ -190,7 +191,7 @@ class pdf_exporter {
 
         $pdf->writeHTML(self::build_html($studentname, $feedbackmarkdown, $payload), true, false, false, false, '');
 
-        $pdf->Output(self::build_filename($studentname), 'D');
+        $pdf->Output(self::build_filename($studentname, time()), 'D');
         exit;
     }
 }

@@ -92,7 +92,6 @@ $PAGE->set_url(new moodle_url('/report/lifestory/index.php', ['userid' => $useri
 $PAGE->set_title(get_string('lifestory', 'report_lifestory'));
 $PAGE->set_heading(get_string('lifestory', 'report_lifestory'));
 
-$PAGE->requires->js_call_amd('gradereport_user/user', 'init');
 $PAGE->requires->js_call_amd('report_lifestory/togglecategories', 'init');
 $PAGE->requires->js_call_amd('report_lifestory/button_loader', 'init');
 // The base URL must stay free of query parameters (the search_results template

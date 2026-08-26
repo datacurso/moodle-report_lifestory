@@ -73,6 +73,27 @@ class behat_report_lifestory extends behat_base {
     }
 
     /**
+     * Opens the life story report page filtered by a course with no student selected.
+     *
+     * This navigates directly to /report/lifestory/index.php?id=C, which is
+     * deterministic regardless of the ids assigned to generated courses.
+     *
+     * @Given /^I visit the life story report filtered by course "(?P<shortname>[^"]*)"$/
+     *
+     * @param string $shortname The shortname of the course the report is filtered by.
+     * @return void
+     */
+    public function i_visit_the_life_story_report_filtered_by_course(string $shortname): void {
+        global $DB;
+
+        $courseid = $DB->get_field('course', 'id', ['shortname' => $shortname], MUST_EXIST);
+
+        $url = new moodle_url('/report/lifestory/index.php', ['id' => $courseid]);
+
+        $this->execute('behat_general::i_visit', [$url->out_as_local_url(false)]);
+    }
+
+    /**
      * Opens the life story report page for a user id that does not exist.
      *
      * A fixed very high user id is used so it can never collide with a

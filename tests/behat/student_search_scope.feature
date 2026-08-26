@@ -55,18 +55,21 @@ Feature: The life story student search only lists students the viewer can see gr
       | viewer2  | lifeviewer |
       | manager1 | manager    |
 
+  @MDL-UNIT-004 @MDL-INT-004
   Scenario: A teacher only finds students of the courses where they can view grades
     Given I log in as "viewer2"
     When I search the life story report for "Alpha"
     Then I should see "Alpha Alpine"
     And I should not see "Alpha Boreal"
 
+  @MDL-UNIT-004 @MDL-INT-004
   Scenario: A manager finds students of every course
     Given I log in as "manager1"
     When I search the life story report for "Alpha"
     Then I should see "Alpha Alpine"
     And I should see "Alpha Boreal"
 
+  @MDL-UNIT-003 @MDL-E2E-004
   Scenario: A search matching more students than the limit shows the more matches notice
     Given I log in as "viewer2"
     When I search the life story report for "Beta"
@@ -75,12 +78,14 @@ Feature: The life story student search only lists students the viewer can see gr
     And I should not see "Beta Match11"
     And I should see "More students match your search. Refine the text to narrow the results."
 
+  @MDL-UNIT-003
   Scenario: A search with few matches does not show the more matches notice
     Given I log in as "manager1"
     When I search the life story report for "Boreal"
     Then I should see "Alpha Boreal"
     And I should not see "More students match your search. Refine the text to narrow the results."
 
+  @MDL-INT-005 @MDL-UNIT-004
   Scenario: A suspended student never appears in the search results
     Given I log in as "viewer2"
     When I search the life story report for "Alpha"

@@ -35,7 +35,7 @@ namespace report_lifestory\local;
  */
 final class feedback_store_test extends \advanced_testcase {
     /**
-     * Ensures a saved feedback text can be read back for the same pair.
+     * MDL-INT-017: A saved feedback text can be read back for the same pair.
      */
     public function test_save_and_get_roundtrip(): void {
         $this->resetAfterTest();
@@ -49,7 +49,7 @@ final class feedback_store_test extends \advanced_testcase {
     }
 
     /**
-     * Ensures saving twice for the same pair replaces the text and keeps a single row.
+     * MDL-INT-017: Saving twice for the same pair replaces the text and keeps a single row.
      */
     public function test_save_upserts_and_keeps_a_single_row(): void {
         global $DB;
@@ -69,7 +69,7 @@ final class feedback_store_test extends \advanced_testcase {
     }
 
     /**
-     * Ensures feedback stored for different course filters does not overlap.
+     * MDL-INT-017: Feedback stored for different course filters does not overlap.
      */
     public function test_feedback_is_separated_per_course_filter(): void {
         $this->resetAfterTest();
@@ -86,7 +86,7 @@ final class feedback_store_test extends \advanced_testcase {
     }
 
     /**
-     * Ensures feedback stored for one student never leaks into another student.
+     * MDL-INT-017: Feedback stored for one student never leaks into another student.
      */
     public function test_feedback_is_separated_per_student(): void {
         $this->resetAfterTest();
@@ -103,7 +103,7 @@ final class feedback_store_test extends \advanced_testcase {
     }
 
     /**
-     * Ensures get_record returns null when no feedback exists for the pair.
+     * MDL-INT-017: get_record returns null when no feedback exists for the pair.
      */
     public function test_get_record_returns_null_when_absent(): void {
         $this->resetAfterTest();
@@ -115,7 +115,7 @@ final class feedback_store_test extends \advanced_testcase {
     }
 
     /**
-     * Ensures get_record returns the full stored row with its timestamps.
+     * MDL-INT-017: get_record returns the full stored row with its timestamps.
      */
     public function test_get_record_returns_full_row(): void {
         $this->resetAfterTest();
@@ -134,7 +134,41 @@ final class feedback_store_test extends \advanced_testcase {
     }
 
     /**
-     * Ensures a second save replaces the text and never moves timemodified backwards.
+     * MDL-INT-017: A new record stores the generating user and both
+     * timestamps, and a regeneration by another user updates the generator
+     * while keeping the creation time.
+     */
+    public function test_save_records_generating_user_and_timestamps(): void {
+        $this->resetAfterTest();
+
+        $student = $this->getDataGenerator()->create_user();
+        $generatoruser = $this->getDataGenerator()->create_user();
+        $otheruser = $this->getDataGenerator()->create_user();
+
+        $this->setUser($generatoruser);
+        $before = time();
+        feedback_store::save($student->id, 0, 'Generated text.');
+
+        $record = feedback_store::get_record($student->id, 0);
+
+        $this->assertEquals($generatoruser->id, $record->usermodified);
+        $this->assertGreaterThanOrEqual($before, (int) $record->timecreated);
+        $this->assertLessThanOrEqual(time(), (int) $record->timecreated);
+        $this->assertEquals($record->timecreated, $record->timemodified);
+
+        $this->setUser($otheruser);
+        $this->waitForSecond();
+        feedback_store::save($student->id, 0, 'Regenerated text.');
+
+        $updated = feedback_store::get_record($student->id, 0);
+
+        $this->assertEquals($otheruser->id, $updated->usermodified);
+        $this->assertEquals($record->timecreated, $updated->timecreated);
+        $this->assertGreaterThan((int) $record->timemodified, (int) $updated->timemodified);
+    }
+
+    /**
+     * MDL-INT-017: A second save replaces the text and never moves timemodified backwards.
      */
     public function test_get_record_after_upsert_reflects_replacement(): void {
         $this->resetAfterTest();
@@ -156,7 +190,7 @@ final class feedback_store_test extends \advanced_testcase {
     }
 
     /**
-     * Ensures the store returns null when no feedback exists for the pair.
+     * MDL-INT-017: The store returns null when no feedback exists for the pair.
      */
     public function test_get_returns_null_when_absent(): void {
         $this->resetAfterTest();

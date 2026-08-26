@@ -38,7 +38,9 @@ require_once($CFG->libdir . '/adminlib.php');
  */
 final class settings_test extends \advanced_testcase {
     /**
-     * Ensures users with report capability can see the report link without site config capability.
+     * MDL-INT-002: Users with the report capability see the report category
+     * and page under Site administration > Reports without the site config
+     * capability.
      *
      * @coversNothing
      */

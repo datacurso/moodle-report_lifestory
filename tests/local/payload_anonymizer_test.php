@@ -111,7 +111,8 @@ final class payload_anonymizer_test extends \advanced_testcase {
     }
 
     /**
-     * Ensures the student name is replaced and mapped for de-anonymization.
+     * MDL-UNIT-014: The student name is replaced by the placeholder and
+     * mapped for de-anonymization.
      */
     public function test_student_name_is_replaced_and_mapped(): void {
         $this->set_fixed_site_identifier();
@@ -123,7 +124,8 @@ final class payload_anonymizer_test extends \advanced_testcase {
     }
 
     /**
-     * Ensures identifier fields become deterministic 16-hex-char pseudonyms.
+     * MDL-UNIT-016: Identifier fields become deterministic 16-hex-char
+     * pseudonyms that differ from the real ids and are never restored.
      */
     public function test_identifier_fields_are_pseudonymized(): void {
         $this->set_fixed_site_identifier();
@@ -151,7 +153,33 @@ final class payload_anonymizer_test extends \advanced_testcase {
     }
 
     /**
-     * Ensures name-bearing feedbacks are masked and other values untouched.
+     * MDL-UNIT-016: Different users produce different pseudonyms and the
+     * reply de-anonymization never restores an identifier.
+     */
+    public function test_pseudonyms_differ_per_user_and_are_not_restored(): void {
+        $this->set_fixed_site_identifier();
+
+        $payload = self::create_payload();
+        $first = payload_anonymizer::anonymize($payload);
+
+        $payload['userid'] = '6';
+        $payload['student_id'] = '43';
+        $second = payload_anonymizer::anonymize($payload);
+
+        $this->assertNotSame($first['payload']['userid'], $second['payload']['userid']);
+        $this->assertNotSame($first['payload']['student_id'], $second['payload']['student_id']);
+
+        $reply = 'Student ' . $first['payload']['student_id'] . ' requested by ' . $first['payload']['userid'];
+        $restored = payload_anonymizer::deanonymize_text($reply, $first['replacements']);
+
+        $this->assertSame($reply, $restored);
+        $this->assertStringNotContainsString(' 42', $restored);
+    }
+
+    /**
+     * MDL-UNIT-015, MDL-UNIT-019: Name-bearing feedbacks are masked while
+     * other values, including accented course and activity names, stay
+     * untouched.
      */
     public function test_feedback_texts_are_masked(): void {
         $this->set_fixed_site_identifier();
@@ -194,7 +222,7 @@ final class payload_anonymizer_test extends \advanced_testcase {
     }
 
     /**
-     * Ensures the full name alone collapses into exactly one placeholder.
+     * MDL-UNIT-015: The full name alone collapses into exactly one placeholder.
      */
     public function test_adjacent_placeholders_are_collapsed(): void {
         $this->set_fixed_site_identifier();
@@ -207,7 +235,31 @@ final class payload_anonymizer_test extends \advanced_testcase {
     }
 
     /**
-     * Ensures de-anonymization restores multiple placeholders in a reply.
+     * MDL-UNIT-015: Name words shorter than three characters are not masked
+     * on their own, while longer words are.
+     */
+    public function test_short_name_words_are_not_masked(): void {
+        $this->set_fixed_site_identifier();
+
+        $payload = self::create_payload();
+        $payload['student_name'] = 'Ana de la Torre';
+        $payload['courses'][0]['sections'][0]['tasks'] = [
+            self::task('Uno', 'La Torre de Ana de la Torre es de piedra'),
+            self::task('Dos', 'Se recomienda la lectura de ANA'),
+            self::task('Tres', 'Ella es la mejor de todas'),
+        ];
+
+        $result = payload_anonymizer::anonymize($payload);
+        $tasks = $result['payload']['courses'][0]['sections'][0]['tasks'];
+
+        // 'Ana' and 'Torre' (3+ chars) are masked; 'de' and 'la' are not.
+        $this->assertSame('La [STUDENT_NAME] de [STUDENT_NAME] es de piedra', $tasks[0]['feedback']);
+        $this->assertSame('Se recomienda la lectura de [STUDENT_NAME]', $tasks[1]['feedback']);
+        $this->assertSame('Ella es la mejor de todas', $tasks[2]['feedback']);
+    }
+
+    /**
+     * MDL-UNIT-014: De-anonymization restores multiple placeholders in a reply.
      */
     public function test_deanonymize_text_restores_placeholders(): void {
         $replacements = ['[STUDENT_NAME]' => 'María José Pérez'];
@@ -222,7 +274,32 @@ final class payload_anonymizer_test extends \advanced_testcase {
     }
 
     /**
-     * Ensures the full roundtrip restores the real name in a crafted reply.
+     * MDL-UNIT-014: A reply without any placeholder is returned intact, and
+     * an empty student name produces no replacement at all.
+     */
+    public function test_deanonymize_without_placeholder_or_name_is_a_noop(): void {
+        $this->set_fixed_site_identifier();
+
+        $reply = 'El estudiante muestra un progreso constante.';
+        $this->assertSame($reply, payload_anonymizer::deanonymize_text($reply, ['[STUDENT_NAME]' => 'María']));
+        $this->assertSame($reply, payload_anonymizer::deanonymize_text($reply, []));
+        $this->assertSame('', payload_anonymizer::deanonymize_text('', ['[STUDENT_NAME]' => 'María']));
+
+        $payload = self::create_payload();
+        $payload['student_name'] = '';
+        $result = payload_anonymizer::anonymize($payload);
+
+        $this->assertSame([], $result['replacements']);
+        $this->assertSame('', $result['payload']['student_name']);
+        $this->assertSame(
+            'Excelente trabajo, María José Pérez, sigue así',
+            $result['payload']['courses'][0]['sections'][0]['tasks'][0]['feedback']
+        );
+        $this->assertSame('[STUDENT_NAME] queda', payload_anonymizer::deanonymize_text('[STUDENT_NAME] queda', []));
+    }
+
+    /**
+     * MDL-UNIT-014: The full roundtrip restores the real name in a crafted reply.
      */
     public function test_full_roundtrip_restores_real_name(): void {
         $this->set_fixed_site_identifier();
@@ -236,6 +313,14 @@ final class payload_anonymizer_test extends \advanced_testcase {
 
         $this->assertStringContainsString('María José Pérez', $restored);
         $this->assertStringNotContainsString('[STUDENT_NAME]', $restored);
+    }
+
+    /**
+     * MDL-UNIT-017: Course, section and activity names must be anonymized too.
+     * [Pendiente:skip] those names currently travel unchanged.
+     */
+    public function test_course_section_and_activity_names_are_anonymized(): void {
+        $this->markTestSkipped('[Pendiente:skip] course/section/activity names are not anonymized');
     }
 
     /**

@@ -62,7 +62,24 @@ final class course_access_test extends \advanced_testcase {
     }
 
     /**
-     * Ensures a teacher only sees the student's grades in the course they teach.
+     * Creates a role granting a single capability and assigns it to a user in a context.
+     *
+     * @param string $capability The capability to allow.
+     * @param int $userid The user receiving the role.
+     * @param \context $context The context of the assignment.
+     * @return void
+     */
+    private function grant(string $capability, int $userid, \context $context): void {
+        static $counter = 0;
+        $counter++;
+
+        $roleid = create_role('Access role ' . $counter, 'lifestoryaccess' . $counter, '');
+        assign_capability($capability, CAP_ALLOW, $roleid, $context->id);
+        role_assign($roleid, $userid, $context->id);
+    }
+
+    /**
+     * MDL-UNIT-006: A teacher only sees the student's grades in the course they teach.
      */
     public function test_teacher_only_sees_grades_in_their_own_course(): void {
         $this->resetAfterTest();
@@ -82,7 +99,7 @@ final class course_access_test extends \advanced_testcase {
     }
 
     /**
-     * Ensures a system-wide manager sees the student's grades in every course.
+     * MDL-UNIT-006: A system-wide manager sees the student's grades in every course.
      */
     public function test_system_manager_sees_grades_in_all_courses(): void {
         global $DB;
@@ -108,7 +125,7 @@ final class course_access_test extends \advanced_testcase {
     }
 
     /**
-     * Ensures a user without any role sees the student's grades in no course.
+     * MDL-UNIT-006: A user without any role sees the student's grades in no course.
      */
     public function test_user_without_roles_sees_no_courses(): void {
         $this->resetAfterTest();
@@ -127,8 +144,71 @@ final class course_access_test extends \advanced_testcase {
     }
 
     /**
-     * Ensures the payload builder only includes the courses the viewing user
-     * is allowed to see grades for.
+     * MDL-UNIT-006: moodle/grade:viewall held in the student's user context
+     * grants access only when the course shows grades to students.
+     */
+    public function test_user_context_viewall_requires_course_showgrades(): void {
+        $this->resetAfterTest();
+
+        $generator = $this->getDataGenerator();
+
+        $shown = $generator->create_course(['fullname' => 'Grades shown', 'showgrades' => 1]);
+        $hidden = $generator->create_course(['fullname' => 'Grades hidden', 'showgrades' => 0]);
+
+        $student = $generator->create_user();
+        $generator->enrol_user($student->id, $shown->id, 'student');
+        $generator->enrol_user($student->id, $hidden->id, 'student');
+
+        // A mentor-like viewer: gradereport/user:view in both courses and
+        // moodle/grade:viewall only in the student's user context.
+        $mentor = $generator->create_user();
+        $this->grant('gradereport/user:view', $mentor->id, \context_course::instance($shown->id));
+        $this->grant('gradereport/user:view', $mentor->id, \context_course::instance($hidden->id));
+        $this->grant('moodle/grade:viewall', $mentor->id, \context_user::instance($student->id));
+
+        $this->setUser($mentor);
+
+        $this->assertFalse(has_capability('moodle/grade:viewall', \context_course::instance($shown->id)));
+        $this->assertTrue(course_access::can_view_student_grades($shown->id, $student->id));
+        $this->assertFalse(course_access::can_view_student_grades($hidden->id, $student->id));
+
+        $filtered = course_access::filter_courses(enrol_get_users_courses($student->id), $student->id);
+
+        $this->assertSame([(int)$shown->id], array_map('intval', array_keys($filtered)));
+    }
+
+    /**
+     * MDL-UNIT-006: moodle/grade:viewall without gradereport/user:view in the
+     * course grants no access, whether held in the course or the user context.
+     */
+    public function test_viewall_without_user_report_capability_is_denied(): void {
+        $this->resetAfterTest();
+
+        $generator = $this->getDataGenerator();
+
+        $course = $generator->create_course(['showgrades' => 1]);
+        $student = $generator->create_user();
+        $generator->enrol_user($student->id, $course->id, 'student');
+
+        $courseviewer = $generator->create_user();
+        $this->grant('moodle/grade:viewall', $courseviewer->id, \context_course::instance($course->id));
+
+        $userviewer = $generator->create_user();
+        $this->grant('moodle/grade:viewall', $userviewer->id, \context_user::instance($student->id));
+
+        $this->setUser($courseviewer);
+        $this->assertTrue(has_capability('moodle/grade:viewall', \context_course::instance($course->id)));
+        $this->assertFalse(course_access::can_view_student_grades($course->id, $student->id));
+
+        $this->setUser($userviewer);
+        $this->assertTrue(has_capability('moodle/grade:viewall', \context_user::instance($student->id)));
+        $this->assertFalse(course_access::can_view_student_grades($course->id, $student->id));
+        $this->assertSame([], course_access::filter_courses(enrol_get_users_courses($student->id), $student->id));
+    }
+
+    /**
+     * MDL-INT-013: The payload builder only includes the courses the viewing
+     * user is allowed to see grades for.
      */
     public function test_payload_builder_respects_course_access(): void {
         global $DB;

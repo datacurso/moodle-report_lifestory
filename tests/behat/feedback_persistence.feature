@@ -19,6 +19,7 @@ Feature: Stored AI feedback is shown when revisiting a student
       | user     | role    |
       | manager1 | manager |
 
+  @MDL-INT-017 @MDL-E2E-006 @MDL-E2E-010
   Scenario: Revisiting a student with stored feedback shows it without any AI call
     Given stored life story feedback "Persisted analysis marker text" exists for user "student1"
     And I log in as "manager1"
@@ -28,6 +29,7 @@ Feature: Stored AI feedback is shown when revisiting a student
     And I should see "Regenerate AI feedback"
     And I should see "Export to PDF"
 
+  @MDL-INT-017 @MDL-E2E-006 @MDL-E2E-010
   Scenario: Visiting a student without stored feedback offers the initial generation action
     Given I log in as "manager1"
     When I view the life story report for user "student1"

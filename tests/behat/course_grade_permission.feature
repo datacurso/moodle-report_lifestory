@@ -30,12 +30,14 @@ Feature: The life story report only lists courses where the viewer can see the s
       | viewer2  | lifeviewer |
       | manager1 | manager    |
 
+  @MDL-INT-013 @MDL-INT-011
   Scenario: A teacher only sees the courses where they can view the student's grades
     Given I log in as "viewer2"
     When I view the life story report for user "student1"
     Then I should see "Course One"
     And I should not see "Course Two"
 
+  @MDL-INT-013 @MDL-INT-011
   Scenario: A manager sees every course of the student
     Given I log in as "manager1"
     When I view the life story report for user "student1"

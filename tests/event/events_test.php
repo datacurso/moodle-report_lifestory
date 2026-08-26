@@ -80,6 +80,7 @@ final class events_test extends \advanced_testcase {
      * @param \stdClass $actor The acting user.
      * @param \context $context The expected context.
      * @param string $crud The expected crud value.
+     * @param int $courseid The expected course filter recorded in the event.
      * @return void
      */
     private function assert_common_contract(
@@ -87,7 +88,8 @@ final class events_test extends \advanced_testcase {
         \stdClass $student,
         \stdClass $actor,
         \context $context,
-        string $crud
+        string $crud,
+        int $courseid
     ): void {
         $this->assertEquals($actor->id, $event->userid);
         $this->assertEquals($student->id, $event->relateduserid);
@@ -99,10 +101,20 @@ final class events_test extends \advanced_testcase {
         $this->assertStringContainsString("'{$student->id}'", $event->get_description());
         $this->assertStringContainsString('report/lifestory', $event->get_url()->out(false));
         $this->assertEquals($student->id, $event->get_url()->get_param('userid'));
+
+        // The course filter is always recorded as additional data.
+        $this->assertArrayHasKey('courseid', $event->other);
+        $this->assertSame($courseid, (int) $event->other['courseid']);
+        if ($courseid) {
+            $this->assertEquals($courseid, $event->get_url()->get_param('id'));
+        } else {
+            $this->assertNull($event->get_url()->get_param('id'));
+        }
     }
 
     /**
-     * Ensures the report viewed event carries the actor and the student.
+     * MDL-INT-023: The report viewed event carries the actor, the student and
+     * the course filter.
      */
     public function test_report_viewed_event(): void {
         [$student, $actor, $context, $courseid] = $this->prepare_fixture();
@@ -110,11 +122,25 @@ final class events_test extends \advanced_testcase {
         $event = $this->capture_event(report_viewed::create_for_student((int) $student->id, $context, $courseid));
 
         $this->assertInstanceOf(report_viewed::class, $event);
-        $this->assert_common_contract($event, $student, $actor, $context, 'r');
+        $this->assert_common_contract($event, $student, $actor, $context, 'r', $courseid);
+        $this->assertSame(get_string('event:reportviewed', 'report_lifestory'), $event->get_name());
     }
 
     /**
-     * Ensures the CSV exported event carries the actor and the student.
+     * MDL-INT-023: The report viewed event records a zero course filter when
+     * the report covers every course.
+     */
+    public function test_report_viewed_event_without_course_filter(): void {
+        [$student, $actor, $context] = $this->prepare_fixture();
+
+        $event = $this->capture_event(report_viewed::create_for_student((int) $student->id, $context, 0));
+
+        $this->assert_common_contract($event, $student, $actor, $context, 'r', 0);
+    }
+
+    /**
+     * MDL-INT-023: The CSV exported event carries the actor, the student and
+     * the course filter.
      */
     public function test_csv_exported_event(): void {
         [$student, $actor, $context, $courseid] = $this->prepare_fixture();
@@ -122,11 +148,13 @@ final class events_test extends \advanced_testcase {
         $event = $this->capture_event(csv_exported::create_for_student((int) $student->id, $context, $courseid));
 
         $this->assertInstanceOf(csv_exported::class, $event);
-        $this->assert_common_contract($event, $student, $actor, $context, 'r');
+        $this->assert_common_contract($event, $student, $actor, $context, 'r', $courseid);
+        $this->assertSame(get_string('event:csvexported', 'report_lifestory'), $event->get_name());
     }
 
     /**
-     * Ensures the PDF exported event carries the actor and the student.
+     * MDL-INT-023: The PDF exported event carries the actor, the student and
+     * the course filter.
      */
     public function test_pdf_exported_event(): void {
         [$student, $actor, $context, $courseid] = $this->prepare_fixture();
@@ -134,28 +162,31 @@ final class events_test extends \advanced_testcase {
         $event = $this->capture_event(pdf_exported::create_for_student((int) $student->id, $context, $courseid));
 
         $this->assertInstanceOf(pdf_exported::class, $event);
-        $this->assert_common_contract($event, $student, $actor, $context, 'r');
+        $this->assert_common_contract($event, $student, $actor, $context, 'r', $courseid);
+        $this->assertSame(get_string('event:pdfexported', 'report_lifestory'), $event->get_name());
     }
 
     /**
-     * Ensures the feedback generated event references the stored feedback record.
+     * MDL-INT-023: The feedback generated event references the stored
+     * feedback record and the course filter it was generated under.
      */
     public function test_feedback_generated_event(): void {
-        [$student, $actor, $context] = $this->prepare_fixture();
+        [$student, $actor, $context, $courseid] = $this->prepare_fixture();
 
-        $feedbackid = feedback_store::save((int) $student->id, 0, 'Generated feedback text.');
+        $feedbackid = feedback_store::save((int) $student->id, $courseid, 'Generated feedback text.');
         $this->assertIsInt($feedbackid);
 
         $event = $this->capture_event(
-            feedback_generated::create_for_student((int) $student->id, $context, 0, $feedbackid)
+            feedback_generated::create_for_student((int) $student->id, $context, $courseid, $feedbackid)
         );
 
         $this->assertInstanceOf(feedback_generated::class, $event);
-        $this->assert_common_contract($event, $student, $actor, $context, 'c');
+        $this->assert_common_contract($event, $student, $actor, $context, 'c', $courseid);
+        $this->assertSame(get_string('event:feedbackgenerated', 'report_lifestory'), $event->get_name());
         $this->assertEquals($feedbackid, $event->objectid);
         $this->assertSame('report_lifestory_feedback', $event->objecttable);
 
-        $secondid = feedback_store::save((int) $student->id, 0, 'Updated feedback text.');
+        $secondid = feedback_store::save((int) $student->id, $courseid, 'Updated feedback text.');
         $this->assertSame($feedbackid, $secondid);
     }
 }

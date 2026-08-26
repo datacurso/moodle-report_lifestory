@@ -26,6 +26,9 @@ require('../../config.php');
 require_once($CFG->libdir . '/gradelib.php');
 require_once($CFG->dirroot . '/grade/lib.php');
 require_once($CFG->dirroot . '/grade/report/lib.php');
+// The user grade report evaluates the GRADE_REPORT_USER_* constants defined in its
+// library when the viewer cannot see hidden grades, so it must be loaded here too.
+require_once($CFG->dirroot . '/grade/report/user/lib.php');
 
 use report_lifestory\api\client;
 use report_lifestory\event\csv_exported;

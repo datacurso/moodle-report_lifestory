@@ -27,7 +27,9 @@ defined('MOODLE_INTERNAL') || die();
 
 $string['activity'] = 'Aktivitas';
 $string['altlogo'] = 'Logo Datacurso';
+$string['calculatedweight'] = 'Bobot terhitung';
 $string['clearselection'] = 'Hapus pilihan';
+$string['contributiontototal'] = 'Kontribusi terhadap total kursus';
 $string['course'] = 'Kursus';
 $string['coursetotal'] = 'Total kursus';
 $string['error_ai_service'] = 'Kesalahan layanan AI: {$a}';
@@ -43,6 +45,7 @@ $string['feedbackfromai'] = 'Umpan balik dari AI';
 $string['feedbackgeneratedon'] = 'Umpan balik dihasilkan pada {$a}';
 $string['generatefeedback'] = 'Hasilkan umpan balik dengan AI';
 $string['generatingfeedback'] = 'Menghasilkan umpan balik';
+$string['grade'] = 'Nilai';
 $string['gradepercent'] = 'Nilai (%)';
 $string['lifestory'] = 'Kisah hidup siswa';
 $string['lifestory:generateaifeedback'] = 'Hasilkan umpan balik AI untuk siswa';
@@ -51,6 +54,8 @@ $string['nocoursesavailable'] = 'Siswa ini tidak memiliki pendaftaran kursus yan
 $string['nofeedbacktopdf'] = 'Buat umpan balik AI sebelum mengekspor PDF.';
 $string['noreportdata'] = 'Tidak ada data laporan yang tersedia.';
 $string['noresponse'] = 'Tidak ada respons yang diterima.';
+$string['pdfnocoursedata'] = 'Tidak ada data nilai yang tersedia untuk kursus ini.';
+$string['percentage'] = 'Persentase';
 $string['pluginname'] = 'Kisah hidup siswa AI';
 $string['privacy:metadata:ai_provider'] = 'Data dikirim ke layanan AI Datacurso untuk menghasilkan umpan balik berdasarkan riwayat akademik siswa.';
 $string['privacy:metadata:ai_provider:courses'] = 'Riwayat akademik terstruktur yang digunakan untuk analisis: nama kursus, bagian, dan aktivitas, nilai, rentang, dan persentase, serta teks umpan balik guru dengan nama siswa yang disamarkan menggunakan penampung.';

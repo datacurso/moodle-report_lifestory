@@ -27,7 +27,9 @@ defined('MOODLE_INTERNAL') || die();
 
 $string['activity'] = 'Aktivität';
 $string['altlogo'] = 'Datacurso-Logo';
+$string['calculatedweight'] = 'Berechnete Gewichtung';
 $string['clearselection'] = 'Auswahl löschen';
+$string['contributiontototal'] = 'Beitrag zum Kursgesamt';
 $string['course'] = 'Kurs';
 $string['coursetotal'] = 'Kursgesamt';
 $string['error_ai_service'] = 'Fehler im KI-Dienst: {$a}';
@@ -43,6 +45,7 @@ $string['feedbackfromai'] = 'KI-Feedback';
 $string['feedbackgeneratedon'] = 'Feedback generiert am {$a}';
 $string['generatefeedback'] = 'Feedback mit KI generieren';
 $string['generatingfeedback'] = 'Feedback wird generiert';
+$string['grade'] = 'Note';
 $string['gradepercent'] = 'Note (%)';
 $string['lifestory'] = 'Lebensgeschichte des Studenten';
 $string['lifestory:generateaifeedback'] = 'KI-Feedback für Studierende generieren';
@@ -51,6 +54,8 @@ $string['nocoursesavailable'] = 'Für diesen Studenten liegen keine Kurseinschre
 $string['nofeedbacktopdf'] = 'Generieren Sie KI-Feedback, bevor Sie das PDF exportieren.';
 $string['noreportdata'] = 'Keine Berichts­daten verfügbar.';
 $string['noresponse'] = 'Keine Antwort erhalten.';
+$string['pdfnocoursedata'] = 'Für diesen Kurs sind keine Bewertungsdaten verfügbar.';
+$string['percentage'] = 'Prozentsatz';
 $string['pluginname'] = 'KI-Lebensgeschichte des Studenten';
 $string['privacy:metadata:ai_provider'] = 'Daten werden an den Datacurso-KI-Dienst gesendet, um Feedback auf Grundlage der akademischen Laufbahn des Studierenden zu generieren.';
 $string['privacy:metadata:ai_provider:courses'] = 'Strukturierte akademische Laufbahn für die Analyse: Namen von Kursen, Abschnitten und Aktivitäten, Bewertungen, Bereiche und Prozentwerte sowie Feedback-Texte der Lehrenden, in denen der Name des Studierenden durch einen Platzhalter maskiert ist.';

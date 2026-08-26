@@ -27,7 +27,9 @@ defined('MOODLE_INTERNAL') || die();
 
 $string['activity'] = 'Activité';
 $string['altlogo'] = 'Logo Datacurso';
+$string['calculatedweight'] = 'Pondération calculée';
 $string['clearselection'] = 'Effacer la sélection';
+$string['contributiontototal'] = 'Contribution au total du cours';
 $string['course'] = 'Cours';
 $string['coursetotal'] = 'Total du cours';
 $string['error_ai_service'] = 'Erreur du service IA : {$a}';
@@ -43,6 +45,7 @@ $string['feedbackfromai'] = 'Retour de l’IA';
 $string['feedbackgeneratedon'] = 'Retour généré le {$a}';
 $string['generatefeedback'] = 'Générer un retour avec l’IA';
 $string['generatingfeedback'] = 'Génération du retour';
+$string['grade'] = 'Note';
 $string['gradepercent'] = 'Note (%)';
 $string['lifestory'] = 'Histoire de vie de l’étudiant';
 $string['lifestory:generateaifeedback'] = 'Générer un retour avec l’IA pour les étudiants';
@@ -51,6 +54,8 @@ $string['nocoursesavailable'] = 'Cet étudiant n’a aucune inscription à un co
 $string['nofeedbacktopdf'] = 'Générez un retour IA avant d’exporter le PDF.';
 $string['noreportdata'] = 'Aucune donnée de rapport disponible.';
 $string['noresponse'] = 'Aucune réponse reçue.';
+$string['pdfnocoursedata'] = 'Aucune donnée de note n’est disponible pour ce cours.';
+$string['percentage'] = 'Pourcentage';
 $string['pluginname'] = 'Histoire de vie de l’étudiant IA';
 $string['privacy:metadata:ai_provider'] = 'Les données sont envoyées au service d’IA Datacurso pour générer un retour basé sur l’historique académique de l’étudiant.';
 $string['privacy:metadata:ai_provider:courses'] = 'Historique académique structuré utilisé pour l’analyse : noms des cours, des sections et des activités, notes, plages et pourcentages, ainsi que les textes de retour des enseignants dans lesquels le nom de l’étudiant est masqué par un espace réservé.';

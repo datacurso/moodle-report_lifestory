@@ -1,0 +1,169 @@
+{{!
+    This file is part of Moodle - http://moodle.org/
+
+    Moodle is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    Moodle is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
+}}
+{{!
+    @template report_lifestory/pdf_document
+
+    Simple TCPDF-compatible HTML document with the AI feedback and the student grades per course.
+    Styling is applied through inline attributes because TCPDF does not load stylesheets and the
+    HTML validator does not allow style elements inside the body.
+
+    Context variables required for this template:
+    * title string - Document title.
+    * studentlabel string - Label shown before the student name.
+    * studentname string - Student full name.
+    * feedbacktitle string - Heading of the AI feedback block.
+    * feedbackhtml string - AI feedback already converted to safe HTML.
+    * courses array - Courses to render, each with: name string, hasdata bool, sections array, total object or null.
+      Each section has: name string, tasks array of rows, total row or null.
+      Each row has: name, calculatedweight, grade, range, percentage, feedback, contributiontototal (all strings).
+
+    Example context (json):
+    {
+        "title": "Student life story",
+        "studentlabel": "Student",
+        "studentname": "Alpha Alpine",
+        "feedbacktitle": "AI feedback",
+        "feedbackhtml": "<h2>Summary</h2><p>Consistent progress across courses.</p>",
+        "courses": [
+            {
+                "name": "Mathematics",
+                "hasdata": true,
+                "sections": [
+                    {
+                        "name": "Algebra",
+                        "tasks": [
+                            {
+                                "name": "Quiz 1",
+                                "calculatedweight": "25.00",
+                                "grade": "8.50",
+                                "range": "0-10.00",
+                                "percentage": "85.00",
+                                "feedback": "Well done",
+                                "contributiontototal": "21.25"
+                            }
+                        ],
+                        "total": {
+                            "name": "Algebra total",
+                            "calculatedweight": "-",
+                            "grade": "8.50",
+                            "range": "0-10.00",
+                            "percentage": "85.00",
+                            "feedback": "",
+                            "contributiontototal": "-"
+                        }
+                    }
+                ],
+                "total": {
+                    "name": "Course total",
+                    "calculatedweight": "-",
+                    "grade": "85.00",
+                    "range": "0-100.00",
+                    "percentage": "85.00",
+                    "feedback": "",
+                    "contributiontototal": "-"
+                }
+            },
+            {
+                "name": "History",
+                "hasdata": false,
+                "sections": [],
+                "total": null
+            }
+        ]
+    }
+}}
+<h1 style="text-align: center;">{{title}}</h1>
+<p><strong>{{studentlabel}}:</strong> {{studentname}}</p>
+<h2>{{feedbacktitle}}</h2>
+<div>{{{feedbackhtml}}}</div>
+{{#courses}}
+<h2>{{name}}</h2>
+{{#hasdata}}
+{{#sections}}
+<h3>{{name}}</h3>
+<table style="width: 100%; border-collapse: collapse; margin-top: 6px; margin-bottom: 12px;">
+    <thead>
+        <tr>
+            <th style="border: 1px solid #9aa0a6; padding: 4px; background-color: #f1f3f4; font-weight: bold;">{{#str}} activity, report_lifestory {{/str}}</th>
+            <th style="border: 1px solid #9aa0a6; padding: 4px; background-color: #f1f3f4; font-weight: bold;">{{#str}} calculatedweight, report_lifestory {{/str}}</th>
+            <th style="border: 1px solid #9aa0a6; padding: 4px; background-color: #f1f3f4; font-weight: bold;">{{#str}} grade, report_lifestory {{/str}}</th>
+            <th style="border: 1px solid #9aa0a6; padding: 4px; background-color: #f1f3f4; font-weight: bold;">{{#str}} range, report_lifestory {{/str}}</th>
+            <th style="border: 1px solid #9aa0a6; padding: 4px; background-color: #f1f3f4; font-weight: bold;">{{#str}} percentage, report_lifestory {{/str}}</th>
+            <th style="border: 1px solid #9aa0a6; padding: 4px; background-color: #f1f3f4; font-weight: bold;">{{#str}} feedback, report_lifestory {{/str}}</th>
+            <th style="border: 1px solid #9aa0a6; padding: 4px; background-color: #f1f3f4; font-weight: bold;">{{#str}} contributiontototal, report_lifestory {{/str}}</th>
+        </tr>
+    </thead>
+    <tbody>
+        {{#tasks}}
+        <tr>
+            <td style="border: 1px solid #9aa0a6; padding: 4px;">{{name}}</td>
+            <td style="border: 1px solid #9aa0a6; padding: 4px;">{{calculatedweight}}</td>
+            <td style="border: 1px solid #9aa0a6; padding: 4px;">{{grade}}</td>
+            <td style="border: 1px solid #9aa0a6; padding: 4px;">{{range}}</td>
+            <td style="border: 1px solid #9aa0a6; padding: 4px;">{{percentage}}</td>
+            <td style="border: 1px solid #9aa0a6; padding: 4px;">{{feedback}}</td>
+            <td style="border: 1px solid #9aa0a6; padding: 4px;">{{contributiontototal}}</td>
+        </tr>
+        {{/tasks}}
+        {{#total}}
+        <tr>
+            <td style="border: 1px solid #9aa0a6; padding: 4px; font-weight: bold;">{{name}}</td>
+            <td style="border: 1px solid #9aa0a6; padding: 4px; font-weight: bold;">{{calculatedweight}}</td>
+            <td style="border: 1px solid #9aa0a6; padding: 4px; font-weight: bold;">{{grade}}</td>
+            <td style="border: 1px solid #9aa0a6; padding: 4px; font-weight: bold;">{{range}}</td>
+            <td style="border: 1px solid #9aa0a6; padding: 4px; font-weight: bold;">{{percentage}}</td>
+            <td style="border: 1px solid #9aa0a6; padding: 4px; font-weight: bold;">{{feedback}}</td>
+            <td style="border: 1px solid #9aa0a6; padding: 4px; font-weight: bold;">{{contributiontototal}}</td>
+        </tr>
+        {{/total}}
+    </tbody>
+</table>
+{{/sections}}
+{{#total}}
+<table style="width: 100%; border-collapse: collapse; margin-top: 6px; margin-bottom: 12px;">
+    <thead>
+        <tr>
+            <th style="border: 1px solid #9aa0a6; padding: 4px; background-color: #f1f3f4; font-weight: bold;">{{#str}} coursetotal, report_lifestory {{/str}}</th>
+            <th style="border: 1px solid #9aa0a6; padding: 4px; background-color: #f1f3f4; font-weight: bold;">{{#str}} calculatedweight, report_lifestory {{/str}}</th>
+            <th style="border: 1px solid #9aa0a6; padding: 4px; background-color: #f1f3f4; font-weight: bold;">{{#str}} grade, report_lifestory {{/str}}</th>
+            <th style="border: 1px solid #9aa0a6; padding: 4px; background-color: #f1f3f4; font-weight: bold;">{{#str}} range, report_lifestory {{/str}}</th>
+            <th style="border: 1px solid #9aa0a6; padding: 4px; background-color: #f1f3f4; font-weight: bold;">{{#str}} percentage, report_lifestory {{/str}}</th>
+            <th style="border: 1px solid #9aa0a6; padding: 4px; background-color: #f1f3f4; font-weight: bold;">{{#str}} feedback, report_lifestory {{/str}}</th>
+            <th style="border: 1px solid #9aa0a6; padding: 4px; background-color: #f1f3f4; font-weight: bold;">{{#str}} contributiontototal, report_lifestory {{/str}}</th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr>
+            <td style="border: 1px solid #9aa0a6; padding: 4px; font-weight: bold;">{{name}}</td>
+            <td style="border: 1px solid #9aa0a6; padding: 4px; font-weight: bold;">{{calculatedweight}}</td>
+            <td style="border: 1px solid #9aa0a6; padding: 4px; font-weight: bold;">{{grade}}</td>
+            <td style="border: 1px solid #9aa0a6; padding: 4px; font-weight: bold;">{{range}}</td>
+            <td style="border: 1px solid #9aa0a6; padding: 4px; font-weight: bold;">{{percentage}}</td>
+            <td style="border: 1px solid #9aa0a6; padding: 4px; font-weight: bold;">{{feedback}}</td>
+            <td style="border: 1px solid #9aa0a6; padding: 4px; font-weight: bold;">{{contributiontototal}}</td>
+        </tr>
+    </tbody>
+</table>
+{{/total}}
+{{/hasdata}}
+{{^hasdata}}
+<p><em>{{#str}} pdfnocoursedata, report_lifestory {{/str}}</em></p>
+{{/hasdata}}
+{{/courses}}
+{{^courses}}
+<p>{{#str}} nocoursesavailable, report_lifestory {{/str}}</p>
+{{/courses}}

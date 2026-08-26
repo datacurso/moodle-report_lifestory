@@ -27,7 +27,9 @@ defined('MOODLE_INTERNAL') || die();
 
 $string['activity'] = 'Активность';
 $string['altlogo'] = 'Логотип Datacurso';
+$string['calculatedweight'] = 'Расчётный вес';
 $string['clearselection'] = 'Очистить выбор';
+$string['contributiontototal'] = 'Вклад в итог по курсу';
 $string['course'] = 'Курс';
 $string['coursetotal'] = 'Итого по курсу';
 $string['error_ai_service'] = 'Ошибка службы ИИ: {$a}';
@@ -43,6 +45,7 @@ $string['feedbackfromai'] = 'Отзыв от ИИ';
 $string['feedbackgeneratedon'] = 'Отзыв создан {$a}';
 $string['generatefeedback'] = 'Создать отзыв с помощью ИИ';
 $string['generatingfeedback'] = 'Создание отзыва';
+$string['grade'] = 'Оценка';
 $string['gradepercent'] = 'Оценка (%)';
 $string['lifestory'] = 'История жизни студента';
 $string['lifestory:generateaifeedback'] = 'Создать отзыв с помощью ИИ для студентов';
@@ -51,6 +54,8 @@ $string['nocoursesavailable'] = 'У этого студента нет дост�
 $string['nofeedbacktopdf'] = 'Сначала сгенерируйте отзыв ИИ перед экспортом PDF.';
 $string['noreportdata'] = 'Нет доступных данных отчета.';
 $string['noresponse'] = 'Ответ не получен.';
+$string['pdfnocoursedata'] = 'Для этого курса нет доступных данных об оценках.';
+$string['percentage'] = 'Процент';
 $string['pluginname'] = 'История жизни студента ИИ';
 $string['privacy:metadata:ai_provider'] = 'Данные отправляются в службу ИИ Datacurso для генерации отзывов на основе академической истории студента.';
 $string['privacy:metadata:ai_provider:courses'] = 'Структурированная академическая история, используемая для анализа: названия курсов, разделов и активностей, оценки, диапазоны и проценты, а также тексты отзывов преподавателей, в которых имя студента замаскировано заполнителем.';

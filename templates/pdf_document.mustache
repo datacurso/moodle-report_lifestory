@@ -95,66 +95,66 @@
 {{#hasdata}}
 {{#sections}}
 <h3>{{name}}</h3>
-<table border="1" cellpadding="4" style="width: 100%; border-collapse: collapse; margin-top: 6px; margin-bottom: 12px;">
+<table style="width: 100%; border-collapse: collapse; margin-top: 6px; margin-bottom: 12px;">
     <thead>
         <tr>
-            <th style="background-color: #f1f3f4; font-weight: bold;">{{#str}} activity, report_lifestory {{/str}}</th>
-            <th style="background-color: #f1f3f4; font-weight: bold;">{{#str}} calculatedweight, report_lifestory {{/str}}</th>
-            <th style="background-color: #f1f3f4; font-weight: bold;">{{#str}} grade, report_lifestory {{/str}}</th>
-            <th style="background-color: #f1f3f4; font-weight: bold;">{{#str}} range, report_lifestory {{/str}}</th>
-            <th style="background-color: #f1f3f4; font-weight: bold;">{{#str}} percentage, report_lifestory {{/str}}</th>
-            <th style="background-color: #f1f3f4; font-weight: bold;">{{#str}} feedback, report_lifestory {{/str}}</th>
-            <th style="background-color: #f1f3f4; font-weight: bold;">{{#str}} contributiontototal, report_lifestory {{/str}}</th>
+            <th style="border: 1px solid #9aa0a6; padding: 4px; background-color: #f1f3f4; font-weight: bold;">{{#str}} activity, report_lifestory {{/str}}</th>
+            <th style="border: 1px solid #9aa0a6; padding: 4px; background-color: #f1f3f4; font-weight: bold;">{{#str}} calculatedweight, report_lifestory {{/str}}</th>
+            <th style="border: 1px solid #9aa0a6; padding: 4px; background-color: #f1f3f4; font-weight: bold;">{{#str}} grade, report_lifestory {{/str}}</th>
+            <th style="border: 1px solid #9aa0a6; padding: 4px; background-color: #f1f3f4; font-weight: bold;">{{#str}} range, report_lifestory {{/str}}</th>
+            <th style="border: 1px solid #9aa0a6; padding: 4px; background-color: #f1f3f4; font-weight: bold;">{{#str}} percentage, report_lifestory {{/str}}</th>
+            <th style="border: 1px solid #9aa0a6; padding: 4px; background-color: #f1f3f4; font-weight: bold;">{{#str}} feedback, report_lifestory {{/str}}</th>
+            <th style="border: 1px solid #9aa0a6; padding: 4px; background-color: #f1f3f4; font-weight: bold;">{{#str}} contributiontototal, report_lifestory {{/str}}</th>
         </tr>
     </thead>
     <tbody>
         {{#tasks}}
         <tr>
-            <td>{{name}}</td>
-            <td>{{calculatedweight}}</td>
-            <td>{{grade}}</td>
-            <td>{{range}}</td>
-            <td>{{percentage}}</td>
-            <td>{{feedback}}</td>
-            <td>{{contributiontototal}}</td>
+            <td style="border: 1px solid #9aa0a6; padding: 4px;">{{name}}</td>
+            <td style="border: 1px solid #9aa0a6; padding: 4px;">{{calculatedweight}}</td>
+            <td style="border: 1px solid #9aa0a6; padding: 4px;">{{grade}}</td>
+            <td style="border: 1px solid #9aa0a6; padding: 4px;">{{range}}</td>
+            <td style="border: 1px solid #9aa0a6; padding: 4px;">{{percentage}}</td>
+            <td style="border: 1px solid #9aa0a6; padding: 4px;">{{feedback}}</td>
+            <td style="border: 1px solid #9aa0a6; padding: 4px;">{{contributiontototal}}</td>
         </tr>
         {{/tasks}}
         {{#total}}
         <tr>
-            <td style="font-weight: bold;">{{name}}</td>
-            <td style="font-weight: bold;">{{calculatedweight}}</td>
-            <td style="font-weight: bold;">{{grade}}</td>
-            <td style="font-weight: bold;">{{range}}</td>
-            <td style="font-weight: bold;">{{percentage}}</td>
-            <td style="font-weight: bold;">{{feedback}}</td>
-            <td style="font-weight: bold;">{{contributiontototal}}</td>
+            <td style="border: 1px solid #9aa0a6; padding: 4px; font-weight: bold;">{{name}}</td>
+            <td style="border: 1px solid #9aa0a6; padding: 4px; font-weight: bold;">{{calculatedweight}}</td>
+            <td style="border: 1px solid #9aa0a6; padding: 4px; font-weight: bold;">{{grade}}</td>
+            <td style="border: 1px solid #9aa0a6; padding: 4px; font-weight: bold;">{{range}}</td>
+            <td style="border: 1px solid #9aa0a6; padding: 4px; font-weight: bold;">{{percentage}}</td>
+            <td style="border: 1px solid #9aa0a6; padding: 4px; font-weight: bold;">{{feedback}}</td>
+            <td style="border: 1px solid #9aa0a6; padding: 4px; font-weight: bold;">{{contributiontototal}}</td>
         </tr>
         {{/total}}
     </tbody>
 </table>
 {{/sections}}
 {{#total}}
-<table border="1" cellpadding="4" style="width: 100%; border-collapse: collapse; margin-top: 6px; margin-bottom: 12px;">
+<table style="width: 100%; border-collapse: collapse; margin-top: 6px; margin-bottom: 12px;">
     <thead>
         <tr>
-            <th style="background-color: #f1f3f4; font-weight: bold;">{{#str}} coursetotal, report_lifestory {{/str}}</th>
-            <th style="background-color: #f1f3f4; font-weight: bold;">{{#str}} calculatedweight, report_lifestory {{/str}}</th>
-            <th style="background-color: #f1f3f4; font-weight: bold;">{{#str}} grade, report_lifestory {{/str}}</th>
-            <th style="background-color: #f1f3f4; font-weight: bold;">{{#str}} range, report_lifestory {{/str}}</th>
-            <th style="background-color: #f1f3f4; font-weight: bold;">{{#str}} percentage, report_lifestory {{/str}}</th>
-            <th style="background-color: #f1f3f4; font-weight: bold;">{{#str}} feedback, report_lifestory {{/str}}</th>
-            <th style="background-color: #f1f3f4; font-weight: bold;">{{#str}} contributiontototal, report_lifestory {{/str}}</th>
+            <th style="border: 1px solid #9aa0a6; padding: 4px; background-color: #f1f3f4; font-weight: bold;">{{#str}} coursetotal, report_lifestory {{/str}}</th>
+            <th style="border: 1px solid #9aa0a6; padding: 4px; background-color: #f1f3f4; font-weight: bold;">{{#str}} calculatedweight, report_lifestory {{/str}}</th>
+            <th style="border: 1px solid #9aa0a6; padding: 4px; background-color: #f1f3f4; font-weight: bold;">{{#str}} grade, report_lifestory {{/str}}</th>
+            <th style="border: 1px solid #9aa0a6; padding: 4px; background-color: #f1f3f4; font-weight: bold;">{{#str}} range, report_lifestory {{/str}}</th>
+            <th style="border: 1px solid #9aa0a6; padding: 4px; background-color: #f1f3f4; font-weight: bold;">{{#str}} percentage, report_lifestory {{/str}}</th>
+            <th style="border: 1px solid #9aa0a6; padding: 4px; background-color: #f1f3f4; font-weight: bold;">{{#str}} feedback, report_lifestory {{/str}}</th>
+            <th style="border: 1px solid #9aa0a6; padding: 4px; background-color: #f1f3f4; font-weight: bold;">{{#str}} contributiontototal, report_lifestory {{/str}}</th>
         </tr>
     </thead>
     <tbody>
         <tr>
-            <td style="font-weight: bold;">{{name}}</td>
-            <td style="font-weight: bold;">{{calculatedweight}}</td>
-            <td style="font-weight: bold;">{{grade}}</td>
-            <td style="font-weight: bold;">{{range}}</td>
-            <td style="font-weight: bold;">{{percentage}}</td>
-            <td style="font-weight: bold;">{{feedback}}</td>
-            <td style="font-weight: bold;">{{contributiontototal}}</td>
+            <td style="border: 1px solid #9aa0a6; padding: 4px; font-weight: bold;">{{name}}</td>
+            <td style="border: 1px solid #9aa0a6; padding: 4px; font-weight: bold;">{{calculatedweight}}</td>
+            <td style="border: 1px solid #9aa0a6; padding: 4px; font-weight: bold;">{{grade}}</td>
+            <td style="border: 1px solid #9aa0a6; padding: 4px; font-weight: bold;">{{range}}</td>
+            <td style="border: 1px solid #9aa0a6; padding: 4px; font-weight: bold;">{{percentage}}</td>
+            <td style="border: 1px solid #9aa0a6; padding: 4px; font-weight: bold;">{{feedback}}</td>
+            <td style="border: 1px solid #9aa0a6; padding: 4px; font-weight: bold;">{{contributiontototal}}</td>
         </tr>
     </tbody>
 </table>

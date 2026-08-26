@@ -133,14 +133,14 @@ final class pdf_exporter_test extends \advanced_testcase {
         $this->assertStringContainsString('Curso de diseño', $html);
         $this->assertStringContainsString('Unidad uno', $html);
         $this->assertStringContainsString('Tarea completa', $html);
-        $this->assertStringContainsString('<td>80.00</td>', $html);
-        $this->assertStringContainsString('<td>0-100.00</td>', $html);
-        $this->assertStringContainsString('<td>50.00</td>', $html);
-        $this->assertStringContainsString('<td>40.00</td>', $html);
+        $this->assertStringContainsString('>80.00</td>', $html);
+        $this->assertStringContainsString('>0-100.00</td>', $html);
+        $this->assertStringContainsString('>50.00</td>', $html);
+        $this->assertStringContainsString('>40.00</td>', $html);
         $this->assertStringContainsString('Excelente trabajo, ñandú über — très bien', $html);
         $this->assertStringContainsString('Unidad uno total', $html);
         $this->assertStringContainsString('Curso de diseño total', $html);
-        $this->assertStringContainsString('<td style="font-weight: bold;">Unidad uno total</td>', $html);
+        $this->assertStringContainsString('font-weight: bold;">Unidad uno total</td>', $html);
         $this->assertStringContainsString(get_string('calculatedweight', 'report_lifestory'), $html);
         $this->assertStringContainsString(get_string('contributiontototal', 'report_lifestory'), $html);
     }
@@ -154,7 +154,7 @@ final class pdf_exporter_test extends \advanced_testcase {
         $html = pdf_exporter::build_html('Alpha Alpine', 'Great progress.', self::create_payload());
 
         $this->assertStringContainsString('Tarea pendiente', $html);
-        $this->assertStringContainsString('<td>-</td>', $html);
+        $this->assertStringContainsString('>-</td>', $html);
     }
 
     /**

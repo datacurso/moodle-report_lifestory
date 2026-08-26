@@ -50,13 +50,18 @@
             <div id="usersearch-wrapper" class="position-relative" style="min-width: 300px;">
                 {{^selecteduser}}
                     <form method="get" {{#baseurl}}action="{{baseurl}}"{{/baseurl}} id="usersearchform">
-                        <input type="text"
-                               name="searchvalue"
-                               id="usersearch"
-                               class="form-control pe-4"
-                               placeholder="{{#str}} searchusers, report_lifestory {{/str}}"
-                               value="{{searchvalue}}"
-                               autocomplete="off">
+                        <label for="usersearch" class="visually-hidden">{{#str}} searchusers, report_lifestory {{/str}}</label>
+                        {{#courseid}}<input type="hidden" name="id" value="{{courseid}}">{{/courseid}}
+                        <div class="input-group">
+                            <input type="text"
+                                   name="searchvalue"
+                                   id="usersearch"
+                                   class="form-control pe-4"
+                                   placeholder="{{#str}} searchusers, report_lifestory {{/str}}"
+                                   value="{{searchvalue}}"
+                                   autocomplete="off">
+                            <button type="submit" class="btn btn-secondary">{{#str}} searchbutton, report_lifestory {{/str}}</button>
+                        </div>
 
                         <div id="search-results"
                              class="position-absolute bg-white border rounded shadow-sm mt-1 w-100 d-none"
@@ -75,6 +80,9 @@
                         </li>
                         {{/searchresults}}
                     </ul>
+                    {{^searchresults}}
+                    <p class="text-muted small mt-2">{{#str}} searchnoresults, report_lifestory {{/str}}</p>
+                    {{/searchresults}}
                     {{#searchhasmore}}
                     <p class="text-muted small mt-1">{{#str}} searchmorematches, report_lifestory {{/str}}</p>
                     {{/searchhasmore}}

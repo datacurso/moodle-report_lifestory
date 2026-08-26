@@ -535,6 +535,83 @@ final class payload_builder_test extends \advanced_testcase {
     }
 
     /**
+     * MDL-UNIT-013: Category and course totals report the range and percentage
+     * the user grade report shows when the course aggregates only graded items
+     * (Natural aggregation): the bounds come from the user's grade, not from
+     * the grade item maximum that counts ungraded items.
+     */
+    public function test_totals_use_user_grade_bounds_when_aggregating_only_graded_items(): void {
+        global $DB;
+
+        $this->resetAfterTest();
+
+        $generator = $this->getDataGenerator();
+
+        $course = $generator->create_course(['fullname' => 'Natural course']);
+        $student = $generator->create_user();
+        $generator->enrol_user($student->id, $course->id, 'student');
+
+        $coursecategory = \grade_category::fetch_course_category($course->id);
+        $coursecategory->aggregation = GRADE_AGGREGATE_SUM;
+        $coursecategory->aggregateonlygraded = 1;
+        $coursecategory->update();
+
+        $category = $generator->create_grade_category([
+            'courseid' => $course->id,
+            'fullname' => 'Unit one',
+            'aggregation' => GRADE_AGGREGATE_SUM,
+            'aggregateonlygraded' => 1,
+        ]);
+        $graded = $generator->create_grade_item([
+            'courseid' => $course->id,
+            'categoryid' => $category->id,
+            'itemname' => 'Graded item',
+            'grademax' => 20,
+        ]);
+        $generator->create_grade_item([
+            'courseid' => $course->id,
+            'categoryid' => $category->id,
+            'itemname' => 'Ungraded item',
+            'grademax' => 20,
+        ]);
+        $generator->create_grade_grade(['itemid' => $graded->id, 'userid' => $student->id, 'grade' => 15]);
+        grade_regrade_final_grades($course->id);
+
+        $manager = $generator->create_user();
+        $managerroleid = $DB->get_field('role', 'id', ['shortname' => 'manager'], MUST_EXIST);
+        role_assign($managerroleid, $manager->id, \context_system::instance()->id);
+        $this->setUser($manager);
+
+        $payload = payload_builder::build($student->id, (int)$course->id);
+        $entry = $payload['courses'][0];
+
+        // The grade items still span both items (40), as the grade table header does.
+        $courseitem = \grade_item::fetch_course_item($course->id);
+        $this->assertEquals(40.0, (float)$courseitem->grademax);
+
+        // The user grade bounds only span the graded item (20).
+        $coursegrade = \grade_grade::fetch(['itemid' => $courseitem->id, 'userid' => $student->id]);
+        $this->assertEquals(20.0, (float)$coursegrade->get_grade_max());
+        $this->assertEquals(15.0, (float)$coursegrade->finalgrade);
+
+        $coursetotal = $entry['total'];
+        $this->assertSame(15.0, $coursetotal['grade']);
+        $this->assertSame('0-' . number_format($coursegrade->get_grade_max(), 2), $coursetotal['range']);
+        $this->assertSame('0-20.00', $coursetotal['range']);
+        $this->assertSame(75.0, $coursetotal['percentage']);
+
+        $sectiontotal = $entry['sections'][0]['total'];
+        $this->assertSame(15.0, $sectiontotal['grade']);
+        $this->assertSame('0-20.00', $sectiontotal['range']);
+        $this->assertSame(75.0, $sectiontotal['percentage']);
+
+        // Plain items keep their own maximum.
+        $task = $this->find_task($payload, 'Graded item');
+        $this->assertSame('0-20.00', $task['range']);
+        $this->assertSame(75.0, $task['percentage']);
+    }
+
+    /**
      * MDL-UNIT-013: Weights and the contribution to the course total are only
      * reported when greater than zero and stay null otherwise.
      */

@@ -17,13 +17,30 @@
 {{!
     @template report_lifestory/search_results
 
+    Context variables required for this template:
+    * students array - Students matching the search, each with: id int, fullname string, email string,
+      profileimageurl string, initial string, baseurl string, courseid int.
+    * hasmore bool - Whether more students match the search beyond the listed results.
+
     Example context (json):
     {
+        "students": [
+            {
+                "id": 3,
+                "fullname": "Alpha Alpine",
+                "email": "alpha@example.com",
+                "profileimageurl": "https://example.com/pluginfile.php/5/user/icon/f1",
+                "initial": "A",
+                "baseurl": "https://example.com/report/lifestory/index.php",
+                "courseid": 0
+            }
+        ],
+        "hasmore": false
     }
 }}
 
 {{#students}}
-<a href="{{baseurl}}?userid={{id}}"
+<a href="{{baseurl}}?userid={{id}}{{#courseid}}&id={{courseid}}{{/courseid}}"
    class="d-block p-2 text-decoration-none border-bottom search-item">
     <div class="d-flex align-items-center">
         {{#profileimageurl}}
@@ -44,3 +61,6 @@
     </div>
 </a>
 {{/students}}
+{{#hasmore}}
+<p class="text-muted small p-2 mb-0">{{#str}} searchmorematches, report_lifestory {{/str}}</p>
+{{/hasmore}}

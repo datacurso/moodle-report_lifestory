@@ -42,19 +42,91 @@ class payload_builder {
     }
 
     /**
+     * Computes the range label and the percentage of a grade the way the user
+     * grade report displays them.
+     *
+     * The bounds come from the user's grade when one exists: for category and
+     * course totals whose category aggregates only graded items, Moodle stores
+     * the per-user minimum and maximum in the grade record, which may differ
+     * from the grade item bounds. Plain items yield their own bounds, and when
+     * the user has no grade the grade item bounds are used.
+     *
+     * @param \grade_item $item Grade item the grade belongs to.
+     * @param \grade_grade|null $grade User grade record, null when not graded.
+     * @return array Two-element list: range label "min-max" and percentage (null when not computable).
+     */
+    private static function range_and_percentage(\grade_item $item, ?\grade_grade $grade): array {
+        $min = (float)$item->grademin;
+        $max = (float)$item->grademax;
+        $finalgrade = null;
+
+        if ($grade) {
+            $finalgrade = $grade->finalgrade === null ? null : (float)$grade->finalgrade;
+            if ($finalgrade !== null) {
+                $grade->grade_item = $item;
+                $min = (float)$grade->get_grade_min();
+                $max = (float)$grade->get_grade_max();
+            }
+        }
+
+        $minlabel = $min == 0 ? '0' : number_format($min, 2);
+        $range = $minlabel . '-' . number_format($max, 2);
+        $percentage = ($max > $min && $finalgrade !== null)
+            ? round((($finalgrade - $min) / ($max - $min)) * 100, 2)
+            : null;
+
+        return [$range, $percentage];
+    }
+
+    /**
+     * Builds a placeholder total object used when no total grade item exists.
+     *
+     * The external AI service requires every section and course to carry a
+     * total object, so missing totals are replaced by this marker instead of
+     * null values that would make the whole request fail.
+     *
+     * @param string $name Marker name to send instead of the grade item name.
+     * @return array Placeholder total entry with null numeric fields.
+     */
+    private static function missing_total(string $name): array {
+        return [
+            'name' => $name,
+            'calculated_weight' => null,
+            'grade' => null,
+            'range' => null,
+            'percentage' => null,
+            'feedback' => '',
+            'contribution_to_total' => null,
+        ];
+    }
+
+    /**
      * Builds the payload with all student information.
      *
+     * The course list is always restricted to the courses where the current
+     * user can view the student's grades. When a course id is given, the
+     * payload is further limited to that single course, and only if it
+     * survived the permission filter.
+     *
      * @param int $userid Moodle user ID.
+     * @param int $courseid Course id to restrict the payload to, 0 for all permitted courses.
      * @return array Student data payload.
      */
-    public static function build(int $userid): array {
+    public static function build(int $userid, int $courseid = 0): array {
         global $DB, $CFG, $USER;
 
+        require_once($CFG->libdir . '/gradelib.php');
+
         $user = $DB->get_record('user', ['id' => $userid], '*', MUST_EXIST);
-        $courses = \enrol_get_users_courses($userid);
+        $courses = course_access::filter_courses(\enrol_get_users_courses($userid), $userid);
+
+        if ($courseid > 0) {
+            $courses = array_filter($courses, static function ($course) use ($courseid): bool {
+                return (int)$course->id === $courseid;
+            });
+        }
 
         $payload = [
-            'site_id' => md5($CFG->wwwroot),
             'userid' => (string)$USER->id,
             'student_id' => (string)$user->id,
             'student_name' => \fullname($user),
@@ -94,10 +166,7 @@ class payload_builder {
 
                         $grade = \grade_grade::fetch(['itemid' => $item->id, 'userid' => $userid]);
                         $finalgrade = $grade ? (float)$grade->finalgrade : null;
-                        $range = '0-' . number_format($item->grademax, 2);
-                        $percentage = ($item->grademax > 0 && $finalgrade !== null)
-                            ? round(($finalgrade / $item->grademax) * 100, 2)
-                            : null;
+                        [$range, $percentage] = self::range_and_percentage($item, $grade ?: null);
                         $feedback = self::safe_feedback($grade);
 
                         $weight = ($item->aggregationcoef2 ?? 0) > 0
@@ -122,10 +191,7 @@ class payload_builder {
                     if ($categoryitem) {
                         $grade = \grade_grade::fetch(['itemid' => $categoryitem->id, 'userid' => $userid]);
                         $finalgrade = $grade ? (float)$grade->finalgrade : null;
-                        $range = '0-' . number_format($categoryitem->grademax, 2);
-                        $percentage = ($categoryitem->grademax > 0 && $finalgrade !== null)
-                            ? round(($finalgrade / $categoryitem->grademax) * 100, 2)
-                            : null;
+                        [$range, $percentage] = self::range_and_percentage($categoryitem, $grade ?: null);
                         $feedback = self::safe_feedback($grade);
 
                         $total = [
@@ -145,14 +211,14 @@ class payload_builder {
                         $sections[] = [
                             'name' => \format_string($cat->get_name(), true, ['context' => $coursecontext]),
                             'tasks' => $tasks,
-                            'total' => $total,
+                            'total' => $total ?? self::missing_total('Total not available'),
                         ];
                     }
                 }
             }
 
             if (!$hascategories) {
-                $items = \grade_item::fetch_all(['courseid' => $course->id]);
+                $items = \grade_item::fetch_all(['courseid' => $course->id]) ?: [];
                 $tasks = [];
                 $total = null;
 
@@ -164,10 +230,7 @@ class payload_builder {
                     if ($item->itemtype === 'course') {
                         $grade = \grade_grade::fetch(['itemid' => $item->id, 'userid' => $userid]);
                         $finalgrade = $grade ? (float)$grade->finalgrade : null;
-                        $range = '0-' . number_format($item->grademax, 2);
-                        $percentage = ($item->grademax > 0 && $finalgrade !== null)
-                            ? round(($finalgrade / $item->grademax) * 100, 2)
-                            : null;
+                        [$range, $percentage] = self::range_and_percentage($item, $grade ?: null);
                         $feedback = self::safe_feedback($grade);
 
                         $total = [
@@ -184,10 +247,7 @@ class payload_builder {
 
                     $grade = \grade_grade::fetch(['itemid' => $item->id, 'userid' => $userid]);
                     $finalgrade = $grade ? (float)$grade->finalgrade : null;
-                    $range = '0-' . number_format($item->grademax, 2);
-                    $percentage = ($item->grademax > 0 && $finalgrade !== null)
-                        ? round(($finalgrade / $item->grademax) * 100, 2)
-                        : null;
+                    [$range, $percentage] = self::range_and_percentage($item, $grade ?: null);
                     $feedback = self::safe_feedback($grade);
 
                     $weight = ($item->aggregationcoef2 ?? 0) > 0
@@ -213,7 +273,7 @@ class payload_builder {
                     $sections[] = [
                         'name' => $course->fullname,
                         'tasks' => $tasks,
-                        'total' => $total,
+                        'total' => $total ?? self::missing_total('Total not available'),
                     ];
                 }
             }
@@ -226,10 +286,7 @@ class payload_builder {
                     if ($item->itemtype === 'course') {
                         $grade = \grade_grade::fetch(['itemid' => $item->id, 'userid' => $userid]);
                         $finalgrade = $grade ? (float)$grade->finalgrade : null;
-                        $range = '0-' . number_format($item->grademax, 2);
-                        $percentage = ($item->grademax > 0 && $finalgrade !== null)
-                            ? round(($finalgrade / $item->grademax) * 100, 2)
-                            : null;
+                        [$range, $percentage] = self::range_and_percentage($item, $grade ?: null);
                         $feedback = self::safe_feedback($grade);
 
                         $coursetotal = [
@@ -249,7 +306,7 @@ class payload_builder {
             $payload['courses'][] = [
                 'name' => $course->fullname,
                 'sections' => array_values($sections),
-                'total' => $coursetotal,
+                'total' => $coursetotal ?? self::missing_total('Total not available'),
             ];
         }
 

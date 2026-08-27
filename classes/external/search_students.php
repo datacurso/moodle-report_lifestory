@@ -60,10 +60,10 @@ class search_students extends external_api {
 
         require_capability('report/lifestory:view', $context);
 
-        $students = student_search::search($params['query']);
+        $searchdata = student_search::search($params['query']);
 
         $results = [];
-        foreach ($students as $student) {
+        foreach ($searchdata['students'] as $student) {
             $usercontext = \context_user::instance($student['id']);
             $profileimageurl = \moodle_url::make_pluginfile_url(
                 $usercontext->id,
@@ -82,7 +82,7 @@ class search_students extends external_api {
             ];
         }
 
-        return ['students' => $results];
+        return ['students' => $results, 'hasmore' => $searchdata['hasmore']];
     }
 
     /**
@@ -100,6 +100,7 @@ class search_students extends external_api {
                     'profileimageurl' => new external_value(PARAM_URL, 'Profile image URL'),
                 ])
             ),
+            'hasmore' => new external_value(PARAM_BOOL, 'Whether more students match beyond the returned results'),
         ]);
     }
 }

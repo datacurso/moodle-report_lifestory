@@ -26,15 +26,20 @@ namespace report_lifestory\local;
 
 /**
  * Builds and downloads PDF documents for the report.
+ *
+ * The document is rendered from the structured grades payload produced by
+ * the payload builder through a dedicated Mustache template, so the PDF no
+ * longer depends on the on-screen grade report markup.
  */
 class pdf_exporter {
     /**
      * Build a readable and safe PDF filename.
      *
      * @param string $studentname Student full name.
+     * @param int $time Timestamp used for the date part of the filename.
      * @return string
      */
-    private static function build_filename(string $studentname): string {
+    public static function build_filename(string $studentname, int $time): string {
         $name = trim($studentname);
         $name = preg_replace('/\s+/u', '_', $name);
         $name = preg_replace('/[^A-Za-z0-9_\-]/u', '', (string)$name);
@@ -44,174 +49,135 @@ class pdf_exporter {
             $name = 'student';
         }
 
-        $date = userdate(time(), '%Y%m%d');
+        $date = userdate($time, '%Y%m%d');
         return 'lifestory_' . $name . '_' . $date . '.pdf';
     }
 
     /**
-     * Normalize text for comparisons.
+     * Remove image tags from HTML before handing it to TCPDF.
      *
-     * @param string $text Input text.
-     * @return string
-     */
-    private static function normalize_text(string $text): string {
-        $text = html_entity_decode($text, ENT_QUOTES | ENT_HTML5, 'UTF-8');
-        $text = str_replace("\xc2\xa0", ' ', $text);
-        $text = preg_replace('/\s+/u', ' ', $text);
-        return \core_text::strtolower(trim((string)$text));
-    }
-
-    /**
-     * Remove the leading empty data column when present.
-     *
-     * @param string $html Table HTML.
-     * @return string
-     */
-    private static function remove_leading_empty_column(string $html): string {
-        if ($html === '') {
-            return $html;
-        }
-
-        $internalerrors = libxml_use_internal_errors(true);
-        $dom = new \DOMDocument('1.0', 'UTF-8');
-        $loaded = $dom->loadHTML('<?xml encoding="utf-8" ?><div>' . $html . '</div>');
-        libxml_clear_errors();
-        libxml_use_internal_errors($internalerrors);
-
-        if (!$loaded) {
-            return $html;
-        }
-
-        $xpath = new \DOMXPath($dom);
-        $tables = $xpath->query('//table');
-        if (!$tables) {
-            return $html;
-        }
-
-        foreach ($tables as $table) {
-            $removedcells = 0;
-            $firstcells = $xpath->query('.//tr/td[1]', $table);
-            if ($firstcells) {
-                foreach ($firstcells as $cell) {
-                    $celltext = self::normalize_text($cell->textContent ?? '');
-                    if ($celltext === '' && $cell->parentNode) {
-                        $cell->parentNode->removeChild($cell);
-                        $removedcells++;
-                    }
-                }
-            }
-
-            if ($removedcells === 0) {
-                continue;
-            }
-
-            $headerfirst = $xpath->query('.//tr[th][1]/th[1]', $table)->item(0);
-            if ($headerfirst instanceof \DOMElement && $headerfirst->hasAttribute('colspan')) {
-                $colspan = (int)$headerfirst->getAttribute('colspan');
-                if ($colspan > 2) {
-                    $headerfirst->setAttribute('colspan', (string)($colspan - 1));
-                } else if ($colspan === 2) {
-                    $headerfirst->removeAttribute('colspan');
-                }
-            }
-        }
-
-        $container = $dom->getElementsByTagName('div')->item(0);
-        return $container ? (string)$dom->saveHTML($container) : $html;
-    }
-
-    /**
-     * Clean HTML for TCPDF compatibility.
+     * TCPDF fails when resolving some Moodle theme or remote image URLs, so
+     * images are dropped from the feedback markup.
      *
      * @param string $html Raw HTML.
      * @return string
      */
-    private static function sanitize_html_for_pdf(string $html): string {
-        // TCPDF fails when resolving some Moodle theme/image URLs in <img> tags.
-        $html = preg_replace('/<img\b[^>]*>/i', '', $html);
-        // Remove inline background images that can trigger similar issues.
-        $html = preg_replace('/background-image\s*:\s*url\([^)]*\)\s*;?/i', '', $html);
-        return (string)$html;
+    private static function strip_images(string $html): string {
+        return (string)preg_replace('/<img\b[^>]*>/i', '', $html);
     }
 
     /**
-     * Keep course report table markup when present.
+     * Format a nullable numeric payload value for display.
      *
-     * @param string $html Raw report HTML.
-     * @return string
+     * @param mixed $value Numeric value or null.
+     * @return string Two decimal representation, or a dash when the value is missing.
      */
-    private static function extract_report_tables(string $html): string {
-        if (!preg_match_all('/<table\b[^>]*>.*?<\/table>/is', $html, $matches)) {
-            return $html;
+    private static function format_number($value): string {
+        if ($value === null || $value === '') {
+            return '-';
         }
-
-        return implode('<br>', $matches[0]);
+        return number_format((float)$value, 2);
     }
 
     /**
-     * Remove duplicated course title row from table body.
+     * Convert a payload task or total entry into a template row.
      *
-     * @param string $html Table HTML.
-     * @param string $coursename Course name shown as heading.
-     * @return string
+     * @param array|null $entry Task or total entry from the payload.
+     * @return array|null Row for the template, or null when the entry is missing.
      */
-    private static function remove_duplicate_course_row(string $html, string $coursename): string {
-        if ($html === '' || $coursename === '') {
-            return $html;
+    private static function build_row(?array $entry): ?array {
+        if ($entry === null) {
+            return null;
         }
 
-        $target = self::normalize_text($coursename);
-        if ($target === '') {
-            return $html;
-        }
+        $range = $entry['range'] ?? null;
 
-        $internalerrors = libxml_use_internal_errors(true);
-        $dom = new \DOMDocument('1.0', 'UTF-8');
-        $loaded = $dom->loadHTML('<?xml encoding="utf-8" ?><div>' . $html . '</div>');
-        libxml_clear_errors();
-        libxml_use_internal_errors($internalerrors);
+        return [
+            'name' => (string)($entry['name'] ?? ''),
+            'calculatedweight' => self::format_number($entry['calculated_weight'] ?? null),
+            'grade' => self::format_number($entry['grade'] ?? null),
+            'range' => ($range === null || $range === '') ? '-' : (string)$range,
+            'percentage' => self::format_number($entry['percentage'] ?? null),
+            'feedback' => (string)($entry['feedback'] ?? ''),
+            'contributiontototal' => self::format_number($entry['contribution_to_total'] ?? null),
+        ];
+    }
 
-        if (!$loaded) {
-            return $html;
-        }
+    /**
+     * Convert a payload course into a template course entry.
+     *
+     * @param array $course Course entry from the payload.
+     * @return array Course entry for the template.
+     */
+    private static function build_course(array $course): array {
+        $sections = [];
+        $hastasks = false;
 
-        $xpath = new \DOMXPath($dom);
-        $tables = $xpath->query('//table');
-        if (!$tables) {
-            return $html;
-        }
-
-        foreach ($tables as $table) {
-            $rows = $xpath->query('.//tr', $table);
-            if (!$rows || $rows->length === 0) {
-                continue;
+        foreach ($course['sections'] ?? [] as $section) {
+            $tasks = [];
+            foreach ($section['tasks'] ?? [] as $task) {
+                $tasks[] = self::build_row($task);
+            }
+            if (!empty($tasks)) {
+                $hastasks = true;
             }
 
-            $rowindex = 0;
-            foreach ($rows as $row) {
-                $normalizedrow = self::normalize_text($row->textContent ?? '');
-                if ($rowindex <= 2 && $normalizedrow === $target) {
-                    $row->parentNode->removeChild($row);
-                    break;
-                }
-                $rowindex++;
-            }
+            $sections[] = [
+                'name' => (string)($section['name'] ?? ''),
+                'tasks' => $tasks,
+                'total' => self::build_row($section['total'] ?? null),
+            ];
         }
 
-        $container = $dom->getElementsByTagName('div')->item(0);
-        return $container ? (string)$dom->saveHTML($container) : $html;
+        $coursetotal = $course['total'] ?? null;
+        $hastotalgrade = is_array($coursetotal) && isset($coursetotal['grade']);
+
+        return [
+            'name' => (string)($course['name'] ?? ''),
+            'hasdata' => $hastasks || $hastotalgrade,
+            'sections' => $sections,
+            'total' => self::build_row($coursetotal),
+        ];
     }
 
     /**
-     * Download PDF with AI feedback and course data.
+     * Build the PDF document HTML from the AI feedback and the grades payload.
      *
      * @param string $studentname Student full name.
      * @param string $feedbackmarkdown Feedback text in markdown.
-     * @param array $coursesdata Course report data.
+     * @param array $payload Student data payload as produced by the payload builder.
+     * @return string HTML rendered from the pdf_document template.
+     */
+    public static function build_html(string $studentname, string $feedbackmarkdown, array $payload): string {
+        global $OUTPUT;
+
+        $courses = [];
+        foreach ($payload['courses'] ?? [] as $course) {
+            $courses[] = self::build_course($course);
+        }
+
+        $context = [
+            'title' => format_string(get_string('lifestory', 'report_lifestory')),
+            'studentlabel' => format_string(get_string('studentlabel', 'report_lifestory')),
+            'studentname' => $studentname,
+            'feedbacktitle' => format_string(get_string('feedbackfromai', 'report_lifestory')),
+            'feedbackhtml' => self::strip_images(format_text($feedbackmarkdown, FORMAT_MARKDOWN)),
+            'courses' => $courses,
+        ];
+
+        return $OUTPUT->render_from_template('report_lifestory/pdf_document', $context);
+    }
+
+    /**
+     * Download PDF with AI feedback and course grade data.
+     *
+     * @param string $studentname Student full name.
+     * @param string $feedbackmarkdown Feedback text in markdown.
+     * @param array $payload Student data payload as produced by the payload builder.
      * @param int $userid Student user ID.
      * @return void
      */
-    public static function download(string $studentname, string $feedbackmarkdown, array $coursesdata, int $userid): void {
+    public static function download(string $studentname, string $feedbackmarkdown, array $payload, int $userid): void {
         global $CFG;
 
         require_once($CFG->libdir . '/pdflib.php');
@@ -223,57 +189,9 @@ class pdf_exporter {
         $pdf->SetAutoPageBreak(true, 12);
         $pdf->AddPage();
 
-        $title = format_string(get_string('lifestory', 'report_lifestory'));
-        $feedbacktitle = format_string(get_string('feedbackfromai', 'report_lifestory'));
-        $studentlabel = format_string(get_string('studentlabel', 'report_lifestory'));
+        $pdf->writeHTML(self::build_html($studentname, $feedbackmarkdown, $payload), true, false, false, false, '');
 
-        $feedbackhtml = self::sanitize_html_for_pdf(format_text($feedbackmarkdown, FORMAT_MARKDOWN));
-
-        $html = '<style>
-            h1 { text-align: center; }
-            h2 { margin-top: 12px; }
-            table { width: 100%; border-collapse: collapse; margin-top: 6px; margin-bottom: 12px; }
-            th, td { border: 1px solid #9aa0a6; padding: 4px; }
-            th { background-color: #f1f3f4; }
-        </style>';
-
-        $html .= '<h1>' . s($title) . '</h1>';
-        $html .= '<p><strong>' . s($studentlabel) . ':</strong> ' . s($studentname) . '</p>';
-        $html .= '<h2>' . s($feedbacktitle) . '</h2>';
-        $html .= '<div>' . $feedbackhtml . '</div>';
-
-        foreach ($coursesdata as $course) {
-            $coursename = isset($course['fullname']) ? $course['fullname'] : '';
-            $reporthtml = isset($course['reporthtml']) ? (string)$course['reporthtml'] : '';
-            $reporthtml = self::extract_report_tables($reporthtml);
-            $reporthtml = self::remove_duplicate_course_row($reporthtml, (string)$coursename);
-            $reporthtml = self::remove_leading_empty_column($reporthtml);
-            $reporthtml = self::sanitize_html_for_pdf($reporthtml);
-
-            if (trim(strip_tags($reporthtml)) === '') {
-                continue;
-            }
-
-            $html .= '<h2>' . s((string)$coursename) . '</h2>';
-            $html .= '<div>' . (string)$reporthtml . '</div>';
-        }
-
-        $html = preg_replace('/(?:<br\s*\/?>\s*)+$/i', '', $html);
-
-        $pdf->writeHTML($html, true, false, false, false, '');
-
-        $lastpage = $pdf->getNumPages();
-        if ($lastpage > 1) {
-            $pdf->setPage($lastpage);
-            $margins = $pdf->getMargins();
-            $currenty = $pdf->GetY();
-            if ($currenty <= ($margins['top'] + 12)) {
-                $pdf->deletePage($lastpage);
-            }
-        }
-
-        $filename = self::build_filename($studentname);
-        $pdf->Output($filename, 'D');
+        $pdf->Output(self::build_filename($studentname, time()), 'D');
         exit;
     }
 }

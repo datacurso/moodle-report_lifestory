@@ -26,7 +26,12 @@
 namespace report_lifestory;
 
 use core_privacy\local\metadata\collection;
+use core_privacy\local\request\approved_contextlist;
+use core_privacy\local\request\approved_userlist;
+use core_privacy\local\request\userlist;
+use core_privacy\local\request\writer;
 use core_privacy\tests\provider_testcase;
+use report_lifestory\local\feedback_store;
 use report_lifestory\privacy\provider;
 
 /**
@@ -38,37 +43,342 @@ use report_lifestory\privacy\provider;
  */
 final class privacy_provider_test extends provider_testcase {
     /**
-     * Ensure that the provider declares the correct external AI service.
+     * MDL-INT-021: The provider declares the external AI service with exactly
+     * the eight transmitted fields.
      * @covers \report_lifestory\privacy\provider::get_metadata
      */
     public function test_get_metadata_declares_external_service(): void {
         $collection = new collection('report_lifestory');
         $metadata = provider::get_metadata($collection)->get_collection();
 
-        $found = false;
+        $links = [];
         foreach ($metadata as $item) {
             if ($item->get_name() === 'ai_provider') {
-                $found = true;
-                $fields = $item->get_privacy_fields();
-
-                // Verify expected data fields are declared.
-                $this->assertArrayHasKey('site_id', $fields);
-                $this->assertArrayHasKey('userid', $fields);
-                $this->assertArrayHasKey('student_id', $fields);
-                $this->assertArrayHasKey('student_name', $fields);
-                $this->assertArrayHasKey('courses', $fields);
+                $links[] = $item;
             }
         }
 
-        $this->assertTrue($found, 'The ai_provider external location should be declared in get_metadata().');
+        $this->assertCount(1, $links, 'Exactly one ai_provider external location should be declared in get_metadata().');
+
+        $item = reset($links);
+        $this->assertInstanceOf(\core_privacy\local\metadata\types\external_location::class, $item);
+
+        $fields = $item->get_privacy_fields();
+        $expected = [
+            'site_id',
+            'site_url',
+            'userid',
+            'student_id',
+            'student_name',
+            'courses',
+            'timezone',
+            'lang',
+        ];
+        $this->assertEqualsCanonicalizing($expected, array_keys($fields));
+        $this->assertCount(8, $fields);
+
+        // The summary and every field description must resolve to a real language string.
+        $stringman = get_string_manager();
+        $this->assertTrue($stringman->string_exists($item->get_summary(), 'report_lifestory'));
+        foreach ($fields as $field => $identifier) {
+            $this->assertTrue(
+                $stringman->string_exists($identifier, 'report_lifestory'),
+                "Missing language string for privacy field '{$field}'."
+            );
+            $this->assertNotEmpty(get_string($identifier, 'report_lifestory'));
+        }
     }
 
     /**
-     * Verify that no contexts or local user data are stored.
+     * MDL-INT-021: The site identifier is described as a persistent random
+     * value added by the provider layer and not derived from the site URL.
+     * @covers \report_lifestory\privacy\provider::get_metadata
+     */
+    public function test_get_metadata_describes_site_id_as_random_persistent_identifier(): void {
+        $collection = new collection('report_lifestory');
+        $metadata = provider::get_metadata($collection)->get_collection();
+
+        $identifier = null;
+        foreach ($metadata as $item) {
+            if ($item->get_name() === 'ai_provider') {
+                $identifier = $item->get_privacy_fields()['site_id'];
+            }
+        }
+
+        $this->assertNotNull($identifier);
+        $description = get_string($identifier, 'report_lifestory');
+
+        $this->assertMatchesRegularExpression('/random/i', $description);
+        $this->assertMatchesRegularExpression('/persistent/i', $description);
+        $this->assertMatchesRegularExpression('/provider/i', $description);
+        $this->assertMatchesRegularExpression('/not derived from the site URL/i', $description);
+    }
+
+    /**
+     * MDL-INT-021: The provider declares the stored feedback database table
+     * with the student, course filter, text, generator and timestamps.
+     * @covers \report_lifestory\privacy\provider::get_metadata
+     */
+    public function test_get_metadata_declares_feedback_table(): void {
+        $collection = new collection('report_lifestory');
+        $metadata = provider::get_metadata($collection)->get_collection();
+
+        $tables = [];
+        foreach ($metadata as $item) {
+            if ($item->get_name() === 'report_lifestory_feedback') {
+                $tables[] = $item;
+            }
+        }
+
+        $this->assertCount(1, $tables, 'Exactly one report_lifestory_feedback table should be declared in get_metadata().');
+
+        $item = reset($tables);
+        $this->assertInstanceOf(\core_privacy\local\metadata\types\database_table::class, $item);
+
+        $fields = $item->get_privacy_fields();
+        $expected = [
+            'studentid',
+            'courseid',
+            'feedback',
+            'usermodified',
+            'timecreated',
+            'timemodified',
+        ];
+        $this->assertEqualsCanonicalizing($expected, array_keys($fields));
+
+        // The summary and every field description must resolve to a real language string.
+        $stringman = get_string_manager();
+        $this->assertTrue($stringman->string_exists($item->get_summary(), 'report_lifestory'));
+        foreach ($fields as $field => $identifier) {
+            $this->assertTrue(
+                $stringman->string_exists($identifier, 'report_lifestory'),
+                "Missing language string for privacy field '{$field}'."
+            );
+            $this->assertNotEmpty(get_string($identifier, 'report_lifestory'));
+        }
+    }
+
+    /**
+     * MDL-INT-022: Only users with stored feedback get the system context.
      * @covers \report_lifestory\privacy\provider::get_contexts_for_userid
      */
-    public function test_no_contexts_or_local_data(): void {
-        $contextlist = provider::get_contexts_for_userid(999);
-        $this->assertEmpty($contextlist->get_contextids(), 'report_lifestory should not store user contexts locally.');
+    public function test_get_contexts_for_userid(): void {
+        $this->resetAfterTest();
+        $this->setAdminUser();
+
+        $student = $this->getDataGenerator()->create_user();
+        $otheruser = $this->getDataGenerator()->create_user();
+
+        feedback_store::save($student->id, 0, 'Stored feedback text.');
+
+        $contextlist = provider::get_contexts_for_userid($student->id);
+        $this->assertEquals([\context_system::instance()->id], $contextlist->get_contextids());
+
+        $contextlist = provider::get_contexts_for_userid($otheruser->id);
+        $this->assertEmpty($contextlist->get_contextids(), 'Users without stored feedback should have no contexts.');
+    }
+
+    /**
+     * MDL-INT-022: The stored feedback of a student is exported at the system context.
+     * @covers \report_lifestory\privacy\provider::export_user_data
+     */
+    public function test_export_user_data(): void {
+        $this->resetAfterTest();
+        $this->setAdminUser();
+
+        $student = $this->getDataGenerator()->create_user();
+
+        feedback_store::save($student->id, 0, 'Exported feedback text.');
+
+        $context = \context_system::instance();
+        $contextlist = new approved_contextlist($student, 'report_lifestory', [$context->id]);
+        provider::export_user_data($contextlist);
+
+        $writer = writer::with_context($context);
+        $this->assertTrue($writer->has_any_data());
+
+        $data = $writer->get_data([get_string('lifestory', 'report_lifestory')]);
+        $this->assertNotEmpty($data->feedback);
+        $this->assertSame('Exported feedback text.', reset($data->feedback)->feedback);
+    }
+
+    /**
+     * MDL-INT-022: The export of a generator includes both the feedback about
+     * them and the feedback they generated for other students.
+     * @covers \report_lifestory\privacy\provider::export_user_data
+     */
+    public function test_export_user_data_includes_rows_generated_by_the_user(): void {
+        $this->resetAfterTest();
+
+        $usera = $this->getDataGenerator()->create_user();
+        $userb = $this->getDataGenerator()->create_user();
+        $userc = $this->getDataGenerator()->create_user();
+
+        $this->setUser($userb);
+        feedback_store::save($usera->id, 0, 'Feedback about A generated by B.');
+        $this->setUser($userc);
+        feedback_store::save($userb->id, 0, 'Feedback about B generated by C.');
+        feedback_store::save($userc->id, 0, 'Feedback about C generated by C.');
+
+        $context = \context_system::instance();
+        $this->assertEquals([$context->id], provider::get_contexts_for_userid($userb->id)->get_contextids());
+
+        $contextlist = new approved_contextlist($userb, 'report_lifestory', [$context->id]);
+        provider::export_user_data($contextlist);
+
+        $data = writer::with_context($context)->get_data([get_string('lifestory', 'report_lifestory')]);
+        $texts = array_column($data->feedback, 'feedback');
+
+        $this->assertEqualsCanonicalizing(
+            ['Feedback about A generated by B.', 'Feedback about B generated by C.'],
+            $texts
+        );
+        $this->assertNotContains('Feedback about C generated by C.', $texts);
+    }
+
+    /**
+     * MDL-INT-022: Deleting for one user removes only the rows of that student.
+     * @covers \report_lifestory\privacy\provider::delete_data_for_user
+     */
+    public function test_delete_data_for_user(): void {
+        global $DB;
+
+        $this->resetAfterTest();
+        $this->setAdminUser();
+
+        $student1 = $this->getDataGenerator()->create_user();
+        $student2 = $this->getDataGenerator()->create_user();
+
+        feedback_store::save($student1->id, 0, 'Feedback for student one.');
+        feedback_store::save($student2->id, 0, 'Feedback for student two.');
+
+        $context = \context_system::instance();
+        $contextlist = new approved_contextlist($student1, 'report_lifestory', [$context->id]);
+        provider::delete_data_for_user($contextlist);
+
+        $this->assertEquals(0, $DB->count_records('report_lifestory_feedback', ['studentid' => $student1->id]));
+        $this->assertEquals(1, $DB->count_records('report_lifestory_feedback', ['studentid' => $student2->id]));
+    }
+
+    /**
+     * MDL-INT-022: Deleting for a user removes the feedback about them and
+     * keeps the feedback they generated for other students.
+     * @covers \report_lifestory\privacy\provider::delete_data_for_user
+     */
+    public function test_delete_data_for_user_keeps_rows_the_user_only_generated(): void {
+        global $DB;
+
+        $this->resetAfterTest();
+
+        $usera = $this->getDataGenerator()->create_user();
+        $userb = $this->getDataGenerator()->create_user();
+
+        $this->setUser($userb);
+        feedback_store::save($usera->id, 0, 'Feedback about A generated by B.');
+        $this->setAdminUser();
+        feedback_store::save($userb->id, 0, 'Feedback about B.');
+
+        $context = \context_system::instance();
+        $contextlist = new approved_contextlist($userb, 'report_lifestory', [$context->id]);
+        provider::delete_data_for_user($contextlist);
+
+        $this->assertEquals(0, $DB->count_records('report_lifestory_feedback', ['studentid' => $userb->id]));
+        $this->assertEquals(1, $DB->count_records('report_lifestory_feedback', ['studentid' => $usera->id]));
+        $this->assertSame('Feedback about A generated by B.', feedback_store::get($usera->id, 0));
+    }
+
+    /**
+     * MDL-INT-022: A user without stored feedback completes export and
+     * deletion requests without error and without data.
+     * @covers \report_lifestory\privacy\provider::export_user_data
+     * @covers \report_lifestory\privacy\provider::delete_data_for_user
+     */
+    public function test_user_without_data_exports_and_deletes_without_error(): void {
+        global $DB;
+
+        $this->resetAfterTest();
+        $this->setAdminUser();
+
+        $student = $this->getDataGenerator()->create_user();
+        $nobody = $this->getDataGenerator()->create_user();
+        feedback_store::save($student->id, 0, 'Feedback for the student.');
+
+        $context = \context_system::instance();
+        $this->assertEmpty(provider::get_contexts_for_userid($nobody->id)->get_contextids());
+
+        $contextlist = new approved_contextlist($nobody, 'report_lifestory', [$context->id]);
+        provider::export_user_data($contextlist);
+        $this->assertFalse(writer::with_context($context)->has_any_data());
+
+        provider::delete_data_for_user($contextlist);
+        $this->assertEquals(1, $DB->count_records('report_lifestory_feedback'));
+    }
+
+    /**
+     * MDL-INT-022: All stored feedback is removed when deleting the system context.
+     * @covers \report_lifestory\privacy\provider::delete_data_for_all_users_in_context
+     */
+    public function test_delete_data_for_all_users_in_context(): void {
+        global $DB;
+
+        $this->resetAfterTest();
+        $this->setAdminUser();
+
+        $student1 = $this->getDataGenerator()->create_user();
+        $student2 = $this->getDataGenerator()->create_user();
+
+        feedback_store::save($student1->id, 0, 'Feedback for student one.');
+        feedback_store::save($student2->id, 0, 'Feedback for student two.');
+
+        provider::delete_data_for_all_users_in_context(\context_system::instance());
+
+        $this->assertEquals(0, $DB->count_records('report_lifestory_feedback'));
+    }
+
+    /**
+     * MDL-INT-022: Students and generators are listed for the system context.
+     * @covers \report_lifestory\privacy\provider::get_users_in_context
+     */
+    public function test_get_users_in_context(): void {
+        $this->resetAfterTest();
+
+        $student = $this->getDataGenerator()->create_user();
+        $generatoruser = $this->getDataGenerator()->create_user();
+        $otheruser = $this->getDataGenerator()->create_user();
+
+        $this->setUser($generatoruser);
+        feedback_store::save($student->id, 0, 'Stored feedback text.');
+
+        $userlist = new userlist(\context_system::instance(), 'report_lifestory');
+        provider::get_users_in_context($userlist);
+
+        $userids = $userlist->get_userids();
+        $this->assertContains((int) $student->id, $userids);
+        $this->assertContains((int) $generatoruser->id, $userids);
+        $this->assertNotContains((int) $otheruser->id, $userids);
+    }
+
+    /**
+     * MDL-INT-022: Deleting an approved userlist removes only the listed students.
+     * @covers \report_lifestory\privacy\provider::delete_data_for_users
+     */
+    public function test_delete_data_for_users(): void {
+        global $DB;
+
+        $this->resetAfterTest();
+        $this->setAdminUser();
+
+        $student1 = $this->getDataGenerator()->create_user();
+        $student2 = $this->getDataGenerator()->create_user();
+
+        feedback_store::save($student1->id, 0, 'Feedback for student one.');
+        feedback_store::save($student2->id, 0, 'Feedback for student two.');
+
+        $context = \context_system::instance();
+        $userlist = new approved_userlist($context, 'report_lifestory', [$student1->id]);
+        provider::delete_data_for_users($userlist);
+
+        $this->assertEquals(0, $DB->count_records('report_lifestory_feedback', ['studentid' => $student1->id]));
+        $this->assertEquals(1, $DB->count_records('report_lifestory_feedback', ['studentid' => $student2->id]));
     }
 }

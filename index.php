@@ -26,13 +26,21 @@ require('../../config.php');
 require_once($CFG->libdir . '/gradelib.php');
 require_once($CFG->dirroot . '/grade/lib.php');
 require_once($CFG->dirroot . '/grade/report/lib.php');
+// The user grade report evaluates the GRADE_REPORT_USER_* constants defined in its
+// library when the viewer cannot see hidden grades, so it must be loaded here too.
+require_once($CFG->dirroot . '/grade/report/user/lib.php');
 
 use report_lifestory\api\client;
+use report_lifestory\event\csv_exported;
+use report_lifestory\event\feedback_generated;
+use report_lifestory\event\pdf_exported;
+use report_lifestory\event\report_viewed;
+use report_lifestory\local\course_access;
 use report_lifestory\local\csv_exporter;
+use report_lifestory\local\feedback_store;
 use report_lifestory\local\payload_builder;
 use report_lifestory\local\pdf_exporter;
 use report_lifestory\local\student_search;
-use report_lifestory\local\text_normalizer;
 
 $userid = optional_param('userid', 0, PARAM_INT);
 $courseid = optional_param('id', 0, PARAM_INT);
@@ -50,10 +58,30 @@ if ($courseid) {
 
 require_capability('report/lifestory:view', $context);
 
+// A nonexistent user id is treated as no selection; the invalid-user error
+// below stays for existing users without the student role.
+if ($userid && !$DB->record_exists('user', ['id' => $userid, 'deleted' => 0])) {
+    $userid = 0;
+}
+
+// Only users holding the student role are valid report targets, matching the search criterion.
+if ($userid && !student_search::is_student($userid)) {
+    throw new moodle_exception('invaliduser', 'error');
+}
+
 // Export CSV.
 if ($userid && $action === 'csv') {
-    $payload = payload_builder::build($userid);
-    $payload = text_normalizer::normalize_payload($payload);
+    require_sesskey();
+
+    $payload = payload_builder::build($userid, $courseid);
+    if (empty($payload['courses'])) {
+        \core\notification::add(
+            get_string('nocoursesavailable', 'report_lifestory'),
+            \core\output\notification::NOTIFY_WARNING
+        );
+        redirect(new moodle_url('/report/lifestory/index.php', ['userid' => $userid, 'id' => $courseid]));
+    }
+    csv_exported::create_for_student($userid, $context, $courseid)->trigger();
     csv_exporter::export($payload);
     exit;
 }
@@ -64,25 +92,31 @@ $PAGE->set_url(new moodle_url('/report/lifestory/index.php', ['userid' => $useri
 $PAGE->set_title(get_string('lifestory', 'report_lifestory'));
 $PAGE->set_heading(get_string('lifestory', 'report_lifestory'));
 
-$PAGE->requires->js_call_amd('gradereport_user/user', 'init');
 $PAGE->requires->js_call_amd('report_lifestory/togglecategories', 'init');
 $PAGE->requires->js_call_amd('report_lifestory/button_loader', 'init');
+// The base URL must stay free of query parameters (the search_results template
+// appends '?userid='); the course filter travels as a separate argument.
 $PAGE->requires->js_call_amd('report_lifestory/user_search', 'init', [
     (new moodle_url('/report/lifestory/index.php'))->out(false),
+    $courseid,
 ]);
 $PAGE->requires->css(new moodle_url('/report/lifestory/styles/history_student.css'));
 
 // Search students based on search value.
 $searchresults = [];
+$searchhasmore = false;
 $selecteduser = null;
 
 if ($searchvalue !== '') {
-    $searchresults = student_search::search($searchvalue);
+    $searchdata = student_search::search($searchvalue);
+    $searchresults = $searchdata['students'];
+    $searchhasmore = $searchdata['hasmore'];
 }
 
 // Get selected user info.
 if ($userid) {
-    $selecteduser = $DB->get_record('user', ['id' => $userid], 'id, firstname, lastname, email');
+    $namefields = implode(', ', \core_user\fields::for_name()->get_required_fields());
+    $selecteduser = $DB->get_record('user', ['id' => $userid], 'id, email, ' . $namefields);
     if ($selecteduser) {
         $selecteduser = [
             'id' => $selecteduser->id,
@@ -97,13 +131,15 @@ $coursesdata = [];
 
 if ($userid) {
     if ($courseid) {
-        $coursesdata[] = [
-            'id' => $courseid,
-            'fullname' => get_course($courseid)->fullname,
-            'reporthtml' => report_lifestory_get_report_html($courseid, $userid),
-        ];
+        if (course_access::can_view_student_grades($courseid, $userid)) {
+            $coursesdata[] = [
+                'id' => $courseid,
+                'fullname' => get_course($courseid)->fullname,
+                'reporthtml' => report_lifestory_get_report_html($courseid, $userid),
+            ];
+        }
     } else {
-        $courses = enrol_get_users_courses($userid);
+        $courses = course_access::filter_courses(enrol_get_users_courses($userid), $userid);
         foreach ($courses as $course) {
             $coursesdata[] = [
                 'id' => $course->id,
@@ -114,12 +150,32 @@ if ($userid) {
     }
 }
 
+if ($userid && $action === '') {
+    report_viewed::create_for_student($userid, $context, $courseid)->trigger();
+}
+
 // AI Feedback.
 $feedbackhtml = null;
+$feedbackdate = null;
+$hasstoredfeedback = false;
 
 if ($userid && $action === 'feedback') {
+    require_sesskey();
+    require_capability('report/lifestory:generateaifeedback', $context);
+
+    // The payload is built before the try block: a student without courses must not
+    // consume an AI call, and the guard redirect must not be swallowed by the catch
+    // blocks below when redirect() is implemented as a thrown exception.
+    $payload = payload_builder::build($userid, $courseid);
+    if (empty($payload['courses'])) {
+        \core\notification::add(
+            get_string('nocoursesavailable', 'report_lifestory'),
+            \core\output\notification::NOTIFY_WARNING
+        );
+        redirect(new moodle_url('/report/lifestory/index.php', ['userid' => $userid, 'id' => $courseid]));
+    }
+
     try {
-        $payload = payload_builder::build($userid);
         $response = client::send_to_ai($payload);
 
         $replytext = '';
@@ -138,10 +194,14 @@ if ($userid && $action === 'feedback') {
         }
 
         $feedbackraw = $replytext;
+        $feedbackid = feedback_store::save($userid, $courseid, $replytext);
+        feedback_generated::create_for_student($userid, $context, $courseid, $feedbackid)->trigger();
         $feedbackhtml = html_writer::div(
             format_text($replytext, FORMAT_MARKDOWN),
             'report_lifestory-feedbackcontent bg-light p-3 rounded'
         );
+        $feedbackdate = userdate(time());
+        $hasstoredfeedback = true;
 
         $cleanurl = (new moodle_url('/report/lifestory/index.php', ['userid' => $userid, 'id' => $courseid]))->out(false);
         $replacehistoryjs = "if (window.history && window.history.replaceState) {"
@@ -165,10 +225,26 @@ if ($userid && $action === 'feedback') {
     }
 }
 
+// Stored feedback: show the persisted AI feedback when no fresh generation happened.
+if ($userid && $feedbackhtml === null) {
+    $storedrecord = feedback_store::get_record($userid, $courseid);
+    if ($storedrecord) {
+        $feedbackhtml = html_writer::div(
+            format_text($storedrecord->feedback, FORMAT_MARKDOWN),
+            'report_lifestory-feedbackcontent bg-light p-3 rounded'
+        );
+        $feedbackraw = $storedrecord->feedback;
+        $feedbackdate = userdate($storedrecord->timemodified);
+        $hasstoredfeedback = true;
+    }
+}
+
 if ($userid && $action === 'pdf') {
     require_sesskey();
 
-    if ($feedbackraw === '') {
+    $storedfeedback = feedback_store::get($userid, $courseid);
+
+    if ($storedfeedback === null || $storedfeedback === '') {
         \core\notification::add(
             get_string('nofeedbacktopdf', 'report_lifestory'),
             \core\output\notification::NOTIFY_WARNING
@@ -177,7 +253,9 @@ if ($userid && $action === 'pdf') {
     }
 
     $studentname = $selecteduser['fullname'] ?? (string)$userid;
-    pdf_exporter::download($studentname, $feedbackraw, $coursesdata, $userid);
+    pdf_exported::create_for_student($userid, $context, $courseid)->trigger();
+    $payload = payload_builder::build($userid, $courseid);
+    pdf_exporter::download($studentname, $storedfeedback, $payload, $userid);
 }
 
 echo $OUTPUT->header();
@@ -194,12 +272,18 @@ $templatecontext = [
     'courseid' => $courseid,
     'searchvalue' => $searchvalue,
     'searchresults' => $searchresults,
+    'searchhasmore' => $searchhasmore,
     'selecteduser' => $selecteduser,
     'hasuser' => (bool)$userid,
+    'hascourses' => !empty($coursesdata),
     'courses' => $coursesdata,
     'feedback' => $feedbackhtml,
     'feedbackraw' => $feedbackraw,
     'showfeedback' => !empty($feedbackhtml),
+    'feedbackdateline' => $feedbackdate !== null
+        ? get_string('feedbackgeneratedon', 'report_lifestory', $feedbackdate)
+        : null,
+    'hasstoredfeedback' => $hasstoredfeedback,
     'canexportpdf' => $userid && !empty($feedbackhtml),
     'headerlogo' => $logocontext,
     'sesskey' => sesskey(),

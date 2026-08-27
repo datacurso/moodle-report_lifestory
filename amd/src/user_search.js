@@ -42,9 +42,11 @@ define(['jquery', 'core/ajax', 'core/templates', 'core/notification'],
         /**
          * Renders the search results using a Mustache template.
          * @param {Array} students List of student objects returned by the webservice.
+         * @param {boolean} hasMore Whether more students match beyond the returned results.
          * @param {string} baseUrl Base URL of the report.
+         * @param {number} courseId Course filter to keep in the result links (0 for none).
          */
-        const renderResults = function (students, baseUrl) {
+        const renderResults = function (students, hasMore, baseUrl, courseId) {
             const container = $('#search-results');
             container.empty();
 
@@ -60,8 +62,10 @@ define(['jquery', 'core/ajax', 'core/templates', 'core/notification'],
                     email: student.email,
                     profileimageurl: student.profileimageurl,
                     baseurl: baseUrl,
+                    courseid: courseId,
                     initial: student.fullname.charAt(0).toUpperCase()
-                }))
+                })),
+                hasmore: hasMore
             };
 
             Templates.render('report_lifestory/search_results', context)
@@ -75,8 +79,9 @@ define(['jquery', 'core/ajax', 'core/templates', 'core/notification'],
         /**
          * Initializes the user search functionality.
          * @param {string} baseUrl Base URL for the current page.
+         * @param {number} courseId Course filter applied to the page (0 for none).
          */
-        const init = function (baseUrl) {
+        const init = function (baseUrl, courseId) {
             const searchInput = $('#usersearch');
             const resultsContainer = $('#search-results');
 
@@ -101,7 +106,7 @@ define(['jquery', 'core/ajax', 'core/templates', 'core/notification'],
                     searchStudents(query)
                         .then(function (response) {
                             const students = response && response.students ? response.students : [];
-                            renderResults(students, baseUrl);
+                            renderResults(students, response && response.hasmore === true, baseUrl, courseId);
                         })
                         .catch(Notification.exception);
                 }, SEARCH_DELAY);

@@ -28,7 +28,6 @@ namespace report_lifestory;
 defined('MOODLE_INTERNAL') || die();
 
 global $CFG;
-require_once($CFG->libdir . '/navigationlib.php');
 require_once($CFG->dirroot . '/report/lifestory/lib.php');
 
 /**

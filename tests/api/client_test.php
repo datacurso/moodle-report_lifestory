@@ -50,6 +50,27 @@ use report_lifestory\local\payload_builder;
  */
 final class client_test extends \advanced_testcase {
     /**
+     * Creates an enabled Datacurso provider instance.
+     *
+     * The provider reads its license key from the AI provider instance
+     * configuration, so the instance must exist before any request is made.
+     *
+     * @param array $config Provider instance configuration.
+     * @return void
+     */
+    private function create_provider_instance(array $config): void {
+        global $DB;
+
+        $manager = new \core_ai\manager($DB);
+        $manager->create_provider_instance(
+            classname: \aiprovider_datacurso\provider::class,
+            name: 'test',
+            enabled: true,
+            config: $config,
+        );
+    }
+
+    /**
      * Configures a license key and queues the mocked HTTP responses.
      *
      * @param string $analysisreply Raw body returned by the analysis endpoint.
@@ -57,7 +78,7 @@ final class client_test extends \advanced_testcase {
      */
     private function mock_ai_service(string $analysisreply): void {
         $this->resetAfterTest();
-        set_config('licensekey', 'test-license-key', 'aiprovider_datacurso');
+        $this->create_provider_instance(['licensekey' => 'test-license-key']);
 
         // LIFO queue: the region lookup is consumed first, then the analysis reply.
         \curl::mock_response($analysisreply);
@@ -154,7 +175,7 @@ final class client_test extends \advanced_testcase {
      */
     public function test_send_to_ai_without_license_key_throws(): void {
         $this->resetAfterTest();
-        unset_config('licensekey', 'aiprovider_datacurso');
+        $this->create_provider_instance([]);
 
         $this->expectException(\moodle_exception::class);
         client::send_to_ai(self::create_payload());

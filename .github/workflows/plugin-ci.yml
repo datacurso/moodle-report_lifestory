@@ -1,8 +1,11 @@
 name: Moodle Plugin CI
 
-# Jenkins (Jenkinsfile.moodleplugin) runs the automatic CI; this workflow is kept for manual runs.
 on:
-  workflow_dispatch:
+  push:
+    branches:
+      - main
+      - MOODLE_500_STABLE
+  pull_request:
 
 jobs:
   test:

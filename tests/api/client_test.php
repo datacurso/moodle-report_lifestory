@@ -50,6 +50,20 @@ use report_lifestory\local\payload_builder;
  */
 final class client_test extends \advanced_testcase {
     /**
+     * Skips the test when the Datacurso AI provider is not installed.
+     *
+     * The provider is a dependency of the plugin but CI environments may run
+     * the plugin tests without it, as the other Datacurso plugins do.
+     *
+     * @return void
+     */
+    private function skip_without_provider(): void {
+        if (!class_exists(datacurso_api_base::class)) {
+            $this->markTestSkipped('aiprovider_datacurso is not installed; the AI client cannot run.');
+        }
+    }
+
+    /**
      * Creates an enabled Datacurso provider instance.
      *
      * The provider reads its license key from the AI provider instance
@@ -61,6 +75,7 @@ final class client_test extends \advanced_testcase {
     private function create_provider_instance(array $config): void {
         global $DB;
 
+        $this->skip_without_provider();
         $manager = new \core_ai\manager($DB);
         $manager->create_provider_instance(
             classname: \aiprovider_datacurso\provider::class,
@@ -209,6 +224,7 @@ final class client_test extends \advanced_testcase {
     public function test_provider_site_uuid_is_random_persistent_and_url_independent(): void {
         global $CFG;
 
+        $this->skip_without_provider();
         $this->resetAfterTest();
         unset_config('site_uuid', 'aiprovider_datacurso');
 

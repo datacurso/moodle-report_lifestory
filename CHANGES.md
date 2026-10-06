@@ -3,11 +3,12 @@
 ### 🚀 Added
 
 - Add Moodle 5.0, 5.1 and 5.2 compatibility (`MOODLE_500_STABLE` branch)
+- Add Jenkins CI (`Jenkinsfile.moodleplugin`) running the plugin checks on Moodle 5.0 and 5.2 with MariaDB
 
 ### 🔄 Changed
 
 - Require Moodle 5.0 (`requires = 2025041400`) and declare `supported = [500, 502]`
-- Run plugin CI against `MOODLE_500_STABLE` and `MOODLE_502_STABLE` with the `MOODLE_500_STABLE` branch of `aiprovider_datacurso`
+- Make the GitHub Actions plugin CI manual-only (Jenkins runs the automatic CI); its matrix targets `MOODLE_500_STABLE` and `MOODLE_502_STABLE` with PostgreSQL 16 and the `MOODLE_500_STABLE` branch of `aiprovider_datacurso`
 - Transliterate accents and non-Latin scripts in the PDF filename instead of dropping them ("Mejía" becomes "Mejia")
 
 ### ⚠️ Deprecated

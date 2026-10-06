@@ -1,11 +1,8 @@
 name: Moodle Plugin CI
 
+# Jenkins (Jenkinsfile.moodleplugin) runs the automatic CI; this workflow is kept for manual runs.
 on:
-  push:
-    branches:
-      - main
-      - MOODLE_500_STABLE
-  pull_request:
+  workflow_dispatch:
 
 jobs:
   test:
@@ -13,7 +10,8 @@ jobs:
 
     services:
       postgres:
-        image: postgres:13
+        # Moodle 5.0 requires PostgreSQL 14 and Moodle 5.2 requires PostgreSQL 16.
+        image: postgres:16
         env:
           POSTGRES_USER: 'postgres'
           POSTGRES_HOST_AUTH_METHOD: 'trust'

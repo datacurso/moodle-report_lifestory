@@ -40,7 +40,8 @@ class pdf_exporter {
      * @return string
      */
     public static function build_filename(string $studentname, int $time): string {
-        $name = trim($studentname);
+        // Transliterate accents and non-Latin scripts so the name stays readable once cleaned.
+        $name = trim(\core_text::specialtoascii($studentname));
         $name = preg_replace('/\s+/u', '_', $name);
         $name = preg_replace('/[^A-Za-z0-9_\-]/u', '', (string)$name);
         $name = trim((string)$name, '_-');
@@ -49,7 +50,8 @@ class pdf_exporter {
             $name = 'student';
         }
 
-        $date = userdate($time, '%Y%m%d');
+        // Keep the leading zero of the day so the date always has eight digits.
+        $date = userdate($time, '%Y%m%d', 99, false);
         return 'lifestory_' . $name . '_' . $date . '.pdf';
     }
 

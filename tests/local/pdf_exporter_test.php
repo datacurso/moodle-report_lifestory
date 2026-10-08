@@ -251,11 +251,9 @@ final class pdf_exporter_test extends \advanced_testcase {
      */
     public function test_build_filename_combines_prefix_name_and_date(): void {
         $time = 1767225600; // 2026-01-01 00:00:00 UTC.
-        // userdate() strips the leading zero of the day by default (fixday),
-        // so the date part is seven or eight digits depending on the day.
-        $date = userdate($time, '%Y%m%d');
+        $date = userdate($time, '%Y%m%d', 99, false);
 
-        $this->assertMatchesRegularExpression('/^\d{7,8}$/', $date);
+        $this->assertMatchesRegularExpression('/^\d{8}$/', $date);
         $this->assertSame('lifestory_Alpha_Alpine_' . $date . '.pdf', pdf_exporter::build_filename('Alpha Alpine', $time));
         $this->assertSame('lifestory_Alpha_Alpine_' . $date . '.pdf', pdf_exporter::build_filename('  Alpha   Alpine  ', $time));
         $this->assertSame('lifestory_Alpha_' . $date . '.pdf', pdf_exporter::build_filename('Alpha', $time));
@@ -263,27 +261,48 @@ final class pdf_exporter_test extends \advanced_testcase {
         // The date part follows the supplied time, not the current one.
         $othertime = $time + 10 * DAYSECS;
         $this->assertSame(
-            'lifestory_Alpha_' . userdate($othertime, '%Y%m%d') . '.pdf',
+            'lifestory_Alpha_' . userdate($othertime, '%Y%m%d', 99, false) . '.pdf',
             pdf_exporter::build_filename('Alpha', $othertime)
         );
     }
 
     /**
-     * MDL-UNIT-025: Accents and special characters are dropped from the
-     * filename so it stays safe for any file system.
+     * MDL-UNIT-025: The date part always has eight digits, keeping the leading
+     * zero of single-digit days so the date is not ambiguous.
      *
      * @return void
      */
-    public function test_build_filename_drops_accents_and_special_characters(): void {
-        $time = 1767225600;
-        $date = userdate($time, '%Y%m%d');
+    public function test_build_filename_keeps_leading_zero_of_the_day(): void {
+        $this->resetAfterTest();
+        $this->setTimezone('UTC');
 
-        $this->assertSame('lifestory_Mara_Jos_Prez_' . $date . '.pdf', pdf_exporter::build_filename('María José Pérez', $time));
+        $time = 1791288000; // 2026-10-06 12:00:00 UTC.
+
+        $this->assertSame('lifestory_Alpha_20261006.pdf', pdf_exporter::build_filename('Alpha', $time));
+    }
+
+    /**
+     * MDL-UNIT-025: Accents and non-Latin scripts are transliterated and the
+     * remaining special characters are dropped, so the filename stays readable
+     * and safe for any file system.
+     *
+     * @return void
+     */
+    public function test_build_filename_transliterates_accents_and_drops_special_characters(): void {
+        $time = 1767225600;
+        $date = userdate($time, '%Y%m%d', 99, false);
+
+        $this->assertSame('lifestory_Maria_Jose_Perez_' . $date . '.pdf', pdf_exporter::build_filename('María José Pérez', $time));
+        $this->assertSame(
+            'lifestory_Valentina_Rojas_Mejia_' . $date . '.pdf',
+            pdf_exporter::build_filename('Valentina Rojas Mejía', $time)
+        );
         $this->assertSame('lifestory_OConnorSmith_' . $date . '.pdf', pdf_exporter::build_filename("O'Connor/Smith", $time));
-        $this->assertSame('lifestory_Ren_Mller-Lde_' . $date . '.pdf', pdf_exporter::build_filename('René Müller-Lüde', $time));
+        $this->assertSame('lifestory_Rene_Muller-Lude_' . $date . '.pdf', pdf_exporter::build_filename('René Müller-Lüde', $time));
+        $this->assertSame('lifestory_Dmitrij_Ivanov_' . $date . '.pdf', pdf_exporter::build_filename('Дмитрий Иванов', $time));
 
         $filename = pdf_exporter::build_filename('Ñandú "Über" <script>?*|', $time);
-        $this->assertMatchesRegularExpression('/^lifestory_[A-Za-z0-9_\-]+_\d{7,8}\.pdf$/', $filename);
+        $this->assertSame('lifestory_Nandu_Uber_script_' . $date . '.pdf', $filename);
         $this->assertDoesNotMatchRegularExpression('/[\s\/\\\\:*?"<>|]/', $filename);
     }
 
@@ -295,12 +314,11 @@ final class pdf_exporter_test extends \advanced_testcase {
      */
     public function test_build_filename_uses_fallback_when_name_empties(): void {
         $time = 1767225600;
-        $date = userdate($time, '%Y%m%d');
+        $date = userdate($time, '%Y%m%d', 99, false);
 
         $this->assertSame('lifestory_student_' . $date . '.pdf', pdf_exporter::build_filename('', $time));
         $this->assertSame('lifestory_student_' . $date . '.pdf', pdf_exporter::build_filename('   ', $time));
-        $this->assertSame('lifestory_student_' . $date . '.pdf', pdf_exporter::build_filename('ñ', $time));
-        $this->assertSame('lifestory_student_' . $date . '.pdf', pdf_exporter::build_filename('Оценка Успеваемости', $time));
+        $this->assertSame('lifestory_student_' . $date . '.pdf', pdf_exporter::build_filename('?*|<>', $time));
         $this->assertSame('lifestory_student_' . $date . '.pdf', pdf_exporter::build_filename('___---', $time));
     }
 }

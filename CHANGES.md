@@ -1,3 +1,62 @@
+## [1.0.6-wp] - 2026-10-08
+
+### 🚀 Added
+
+- Add Jenkins CI (`Jenkinsfile.moodleplugin`) running the plugin checks on Moodle 4.5 with MariaDB and PostgreSQL
+
+### 🔄 Changed
+
+- Transliterate accents and non-Latin scripts in the PDF filename instead of dropping them ("Mejía" becomes "Mejia"), synchronized from `MOODLE_500_STABLE` (1.0.6)
+
+### ⚠️ Deprecated
+
+### ❌ Removed
+
+### 🐞 Fixed
+
+- Keep the leading zero of the day in the PDF filename date so it always has eight digits (`20261006` instead of `2026106`)
+- Stop including `lib/navigationlib.php` manually in the PHPUnit tests: it is already loaded by core
+- Skip the AI client PHPUnit tests when `aiprovider_datacurso` is not installed
+
+### 🔐 Security
+
+## [1.0.5-wp] - 2026-10-05
+
+### 🚀 Added
+
+- First Moodle Workplace 4.5 release, synchronized from `main` (1.0.5)
+- Student search with pagination, scoped to courses whose grades the viewer can see
+- Course filter in the life story report
+- Server-side storage of AI-generated feedback with generation timestamps
+- Event logging for report actions
+- Pseudonymization of student names in the AI payload
+- Grade range and percentage in the AI payload
+- Handling for nonexistent users and students without course enrolments
+
+### 🔄 Changed
+
+- `$plugin->supported` restricted to `[405, 405]` (Moodle Workplace 4.5)
+- PDF export layout and language support
+- CSV export handles UTF-8 directly instead of normalizing text
+- Privacy metadata now declares the data sent to the AI provider
+
+### ⚠️ Deprecated
+
+### ❌ Removed
+
+- `.github/workflows/moodle-release.yml` (Workplace releases are created manually)
+
+### 🐞 Fixed
+
+- Session key required for CSV export and feedback actions
+- Capability and student-role checks for AI feedback generation
+- Load the user grade report library to handle hidden grades
+- Remove unneeded JavaScript initialization for the user grade report
+
+### 🔐 Security
+
+- Course access control before showing student grades
+
 ## [1.0.4] - 2026-04-21
 
 ### 🚀 Added

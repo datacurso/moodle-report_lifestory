@@ -1,3 +1,23 @@
+## [1.0.6-wp] - 2026-10-08
+
+### 🚀 Added
+
+### 🔄 Changed
+
+- Transliterate accents and non-Latin scripts in the PDF filename instead of dropping them ("Mejía" becomes "Mejia"), synchronized from `MOODLE_500_STABLE` (1.0.6)
+
+### ⚠️ Deprecated
+
+### ❌ Removed
+
+### 🐞 Fixed
+
+- Keep the leading zero of the day in the PDF filename date so it always has eight digits (`20261006` instead of `2026106`)
+- Stop including `lib/navigationlib.php` manually in the PHPUnit tests: it is already loaded by core
+- Skip the AI client PHPUnit tests when `aiprovider_datacurso` is not installed
+
+### 🔐 Security
+
 ## [1.0.5-wp] - 2026-10-05
 
 ### 🚀 Added

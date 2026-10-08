@@ -2,6 +2,8 @@
 
 ### 🚀 Added
 
+- Add Jenkins CI (`Jenkinsfile.moodleplugin`) running the plugin checks on Moodle 4.5 with MariaDB and PostgreSQL
+
 ### 🔄 Changed
 
 - Transliterate accents and non-Latin scripts in the PDF filename instead of dropping them ("Mejía" becomes "Mejia"), synchronized from `MOODLE_500_STABLE` (1.0.6)

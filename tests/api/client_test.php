@@ -50,12 +50,27 @@ use report_lifestory\local\payload_builder;
  */
 final class client_test extends \advanced_testcase {
     /**
+     * Skips the test when the Datacurso AI provider is not installed.
+     *
+     * The provider is a dependency of the plugin but CI environments may run
+     * the plugin tests without it, as the other Datacurso plugins do.
+     *
+     * @return void
+     */
+    private function skip_without_provider(): void {
+        if (!class_exists(datacurso_api_base::class)) {
+            $this->markTestSkipped('aiprovider_datacurso is not installed; the AI client cannot run.');
+        }
+    }
+
+    /**
      * Configures a license key and queues the mocked HTTP responses.
      *
      * @param string $analysisreply Raw body returned by the analysis endpoint.
      * @return void
      */
     private function mock_ai_service(string $analysisreply): void {
+        $this->skip_without_provider();
         $this->resetAfterTest();
         set_config('licensekey', 'test-license-key', 'aiprovider_datacurso');
 
@@ -153,6 +168,7 @@ final class client_test extends \advanced_testcase {
      * with a Moodle exception before contacting the analysis service.
      */
     public function test_send_to_ai_without_license_key_throws(): void {
+        $this->skip_without_provider();
         $this->resetAfterTest();
         unset_config('licensekey', 'aiprovider_datacurso');
 
@@ -188,6 +204,7 @@ final class client_test extends \advanced_testcase {
     public function test_provider_site_uuid_is_random_persistent_and_url_independent(): void {
         global $CFG;
 
+        $this->skip_without_provider();
         $this->resetAfterTest();
         unset_config('site_uuid', 'aiprovider_datacurso');
 

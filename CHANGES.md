@@ -6,6 +6,7 @@
 
 - Add Moodle 5.3 compatibility: declare `supported = [500, 503]` and add `MOODLE_503_STABLE` to the Jenkins and GitHub Actions CI matrices
 - Record the scope of each stored AI feedback (analysed courses and courses where hidden grades were included) in the new `scope` field of `report_lifestory_feedback`
+- Accept an optional `courseid` filter in the `report_lifestory_search_students` web service, applied to the live and the static search, and return it with the results
 
 ### 🐞 Fixed
 
@@ -14,6 +15,12 @@
 - Lock the "Generate AI feedback" button in the same click so a double click no longer sends two generation requests
 - Require the student to be enrolled in the filtered course before showing its grades and the generate and CSV buttons
 - Show "No report data available." for a course without graded activities instead of a course total with "Error"
+- Show the coloured circle with the initial for students without a profile picture in the live search instead of the default silhouette
+- Spell the CSV "Section" column header with its accent in Spanish ("Sección")
+- List the course total once in the CSV and the PDF for courses without grade categories, and drop the repeated course name heading in the PDF
+- Report the contribution of each activity to the course total as the user report does, from the aggregation weights, instead of the weight override flag
+- Give the PDF table columns fixed widths so headers such as "Feedback" are no longer split mid-word
+- Clean the generation request from the address bar after an AI service error too, so reloading the page does not send it again
 
 ## [1.0.6] - 2026-10-06
 

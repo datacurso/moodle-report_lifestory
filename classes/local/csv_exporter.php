@@ -76,7 +76,7 @@ class csv_exporter {
                     ]) . "\n";
                 }
 
-                if (!empty($section['total'])) {
+                if (!empty($section['total']) && !payload_builder::section_repeats_course_total($course, $section)) {
                     $total = $section['total'];
                     $csv .= implode(',', [
                         self::csv_field($coursename),

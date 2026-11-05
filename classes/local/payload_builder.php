@@ -85,10 +85,63 @@ class payload_builder {
             'range' => $range,
             'percentage' => $percentage,
             'feedback' => self::safe_feedback($grade),
-            'contribution_to_total' => isset($item->weightoverride) && $item->weightoverride > 0
-                ? round($item->weightoverride * 100, 2)
-                : null,
+            'contribution_to_total' => self::contribution($item, $grade, $finalgrade, $min, $max),
         ];
+    }
+
+    /**
+     * Percentage of the course total contributed by one activity grade, as the user report shows it.
+     *
+     * The normalised grade is multiplied by the aggregation weight of the grade and of every
+     * category total above it, up to the course total.
+     *
+     * @param \grade_item $item The activity grade item.
+     * @param \grade_grade|null $grade The student's grade, if any.
+     * @param float|null $finalgrade The final grade.
+     * @param float $min Minimum grade.
+     * @param float $max Maximum grade.
+     * @return float|null Null when there is no grade or the weights are not known.
+     */
+    private static function contribution(
+        \grade_item $item,
+        ?\grade_grade $grade,
+        ?float $finalgrade,
+        float $min,
+        float $max
+    ): ?float {
+        if (!$grade || $finalgrade === null || $max <= $min || $grade->aggregationweight === null) {
+            return null;
+        }
+
+        $weight = (float)$grade->aggregationweight;
+        $category = $item->load_parent_category();
+        while ($category && !$category->is_course_category()) {
+            $categoryitem = $category->load_grade_item();
+            $categorygrade = \grade_grade::fetch(['itemid' => $categoryitem->id, 'userid' => $grade->userid]);
+            if (!$categorygrade || $categorygrade->aggregationweight === null) {
+                return null;
+            }
+            $weight *= (float)$categorygrade->aggregationweight;
+            $category = $category->load_parent_category();
+        }
+
+        return round(($finalgrade - $min) / ($max - $min) * $weight * 100, 2);
+    }
+
+    /**
+     * Whether a section only repeats the course total: the single section of a course without
+     * grade categories, named after the course and closed by the course total.
+     *
+     * Exports use it to avoid printing the course total twice.
+     *
+     * @param array $course A course of the payload.
+     * @param array $section One of its sections.
+     * @return bool
+     */
+    public static function section_repeats_course_total(array $course, array $section): bool {
+        return count($course['sections'] ?? []) === 1
+            && ($section['name'] ?? null) === ($course['name'] ?? null)
+            && ($section['total'] ?? null) === ($course['total'] ?? null);
     }
 
     /**

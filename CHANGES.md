@@ -1,3 +1,20 @@
+## [1.0.7] - 2026-11-05
+
+**Compatibility note:** This version is compatible from **Moodle 5.0** to **Moodle 5.3**.
+
+### 🚀 Added
+
+- Add Moodle 5.3 compatibility: declare `supported = [500, 503]` and add `MOODLE_503_STABLE` to the Jenkins and GitHub Actions CI matrices
+- Record the scope of each stored AI feedback (analysed courses and courses where hidden grades were included) in the new `scope` field of `report_lifestory_feedback`
+
+### 🐞 Fixed
+
+- Leave hidden grades out of the data sent to the AI service when the requester cannot see them, and hide, recalculate or keep course and category totals that contain them following the course setting "Hide totals if they contain hidden items"
+- Show a stored AI feedback, on the page and in the PDF, only to users who can see the grades of every course it analysed and, where it included hidden grades, those hidden grades
+- Lock the "Generate AI feedback" button in the same click so a double click no longer sends two generation requests
+- Require the student to be enrolled in the filtered course before showing its grades and the generate and CSV buttons
+- Show "No report data available." for a course without graded activities instead of a course total with "Error"
+
 ## [1.0.6] - 2026-10-06
 
 ### 🚀 Added

@@ -39,6 +39,12 @@ class search_students extends external_api {
     public static function execute_parameters() {
         return new external_function_parameters([
             'query' => new external_value(PARAM_TEXT, 'Search query'),
+            'courseid' => new external_value(
+                PARAM_INT,
+                'Course filter: only students enrolled in this course (0 for none)',
+                VALUE_DEFAULT,
+                0
+            ),
         ]);
     }
 
@@ -46,11 +52,13 @@ class search_students extends external_api {
      * Search for students.
      *
      * @param string $query Search query
+     * @param int $courseid Course filter (0 for none)
      * @return array
      */
-    public static function execute($query) {
+    public static function execute($query, $courseid = 0) {
         $params = self::validate_parameters(self::execute_parameters(), [
             'query' => $query,
+            'courseid' => $courseid,
         ]);
 
         require_login();
@@ -60,19 +68,23 @@ class search_students extends external_api {
 
         require_capability('report/lifestory:view', $context);
 
-        $searchdata = student_search::search($params['query']);
+        $searchdata = student_search::search($params['query'], 10, $params['courseid']);
 
         $results = [];
         foreach ($searchdata['students'] as $student) {
-            $usercontext = \context_user::instance($student['id']);
-            $profileimageurl = \moodle_url::make_pluginfile_url(
-                $usercontext->id,
-                'user',
-                'icon',
-                null,
-                '/',
-                'f1'
-            )->out(false);
+            // Without an uploaded picture the URL is left empty so the results show the initial instead.
+            $profileimageurl = '';
+            if ($student['haspicture']) {
+                $usercontext = \context_user::instance($student['id']);
+                $profileimageurl = \moodle_url::make_pluginfile_url(
+                    $usercontext->id,
+                    'user',
+                    'icon',
+                    null,
+                    '/',
+                    'f1'
+                )->out(false);
+            }
 
             $results[] = [
                 'id' => $student['id'],
@@ -82,7 +94,7 @@ class search_students extends external_api {
             ];
         }
 
-        return ['students' => $results, 'hasmore' => $searchdata['hasmore']];
+        return ['students' => $results, 'hasmore' => $searchdata['hasmore'], 'courseid' => $params['courseid']];
     }
 
     /**
@@ -97,10 +109,11 @@ class search_students extends external_api {
                     'id' => new external_value(PARAM_INT, 'User ID'),
                     'fullname' => new external_value(PARAM_TEXT, 'Full name'),
                     'email' => new external_value(PARAM_EMAIL, 'Email address'),
-                    'profileimageurl' => new external_value(PARAM_URL, 'Profile image URL'),
+                    'profileimageurl' => new external_value(PARAM_URL, 'Profile image URL, empty when the student has no picture'),
                 ])
             ),
             'hasmore' => new external_value(PARAM_BOOL, 'Whether more students match beyond the returned results'),
+            'courseid' => new external_value(PARAM_INT, 'Course filter applied to the search (0 for none)'),
         ]);
     }
 }

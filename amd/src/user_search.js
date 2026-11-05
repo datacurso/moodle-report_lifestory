@@ -30,12 +30,13 @@ define(['jquery', 'core/ajax', 'core/templates', 'core/notification'],
         /**
          * Calls the external function to search for students.
          * @param {string} query Search term entered by the user.
+         * @param {number} courseId Course filter applied to the page (0 for none).
          * @return {Promise}
          */
-        const searchStudents = function (query) {
+        const searchStudents = function (query, courseId) {
             return Ajax.call([{
                 methodname: 'report_lifestory_search_students',
-                args: { query: query }
+                args: {query: query, courseid: courseId || 0}
             }])[0];
         };
 
@@ -103,7 +104,7 @@ define(['jquery', 'core/ajax', 'core/templates', 'core/notification'],
                 }
 
                 searchTimeout = setTimeout(function () {
-                    searchStudents(query)
+                    searchStudents(query, courseId)
                         .then(function (response) {
                             const students = response && response.students ? response.students : [];
                             renderResults(students, response && response.hasmore === true, baseUrl, courseId);

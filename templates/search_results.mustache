@@ -29,7 +29,7 @@
                 "id": 3,
                 "fullname": "Alpha Alpine",
                 "email": "alpha@example.com",
-                "profileimageurl": "https://example.com/pluginfile.php/5/user/icon/f1",
+                "profileimageurl": "",
                 "initial": "A",
                 "baseurl": "https://example.com/report/lifestory/index.php",
                 "courseid": 0
@@ -48,8 +48,8 @@
                  class="rounded-circle me-3" width="40" height="40">
         {{/profileimageurl}}
         {{^profileimageurl}}
-            <div class="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center me-3"
-                 style="width:40px; height:40px; font-weight:bold;">
+            <div class="report_lifestory-initial rounded-circle bg-primary text-white d-flex align-items-center justify-content-center me-3"
+                 aria-hidden="true">
                 {{initial}}
             </div>
         {{/profileimageurl}}

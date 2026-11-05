@@ -108,7 +108,7 @@ $searchhasmore = false;
 $selecteduser = null;
 
 if ($searchvalue !== '') {
-    $searchdata = student_search::search($searchvalue);
+    $searchdata = student_search::search($searchvalue, 10, $courseid);
     $searchresults = $searchdata['students'];
     $searchhasmore = $searchdata['hasmore'];
 }
@@ -205,12 +205,6 @@ if ($userid && $action === 'feedback') {
         );
         $feedbackdate = userdate(time());
         $hasstoredfeedback = true;
-
-        $cleanurl = (new moodle_url('/report/lifestory/index.php', ['userid' => $userid, 'id' => $courseid]))->out(false);
-        $replacehistoryjs = "if (window.history && window.history.replaceState) {"
-            . " window.history.replaceState(null, document.title, '" . $cleanurl . "');"
-            . ' }';
-        $PAGE->requires->js_init_code($replacehistoryjs);
     } catch (\moodle_exception $e) {
         debugging(get_string('error_ai_service', 'report_lifestory', $e->getMessage()), DEBUG_DEVELOPER);
 
@@ -226,6 +220,14 @@ if ($userid && $action === 'feedback') {
             \core\output\notification::NOTIFY_ERROR
         );
     }
+
+    // Leave the generation request out of the address bar, after a success or an error alike,
+    // so reloading the page shows it again instead of sending a new request to the AI service.
+    $cleanurl = (new moodle_url('/report/lifestory/index.php', ['userid' => $userid, 'id' => $courseid]))->out(false);
+    $replacehistoryjs = "if (window.history && window.history.replaceState) {"
+        . " window.history.replaceState(null, document.title, '" . $cleanurl . "');"
+        . ' }';
+    $PAGE->requires->js_init_code($replacehistoryjs);
 }
 
 // Stored feedback: show the persisted AI feedback when no fresh generation happened.

@@ -37,11 +37,12 @@ class student_search {
      *
      * @param string $query Search text.
      * @param int $limit Max number of users to return.
+     * @param int $courseid Course filter: only students enrolled in this course (0 for none).
      * @return array Array with two keys: 'students' (list of arrays with id int,
-     *               fullname string and email string) and 'hasmore' (bool, true
-     *               when more students match beyond the returned results).
+     *               fullname string, email string and haspicture bool) and 'hasmore'
+     *               (bool, true when more students match beyond the returned results).
      */
-    public static function search(string $query, int $limit = 10): array {
+    public static function search(string $query, int $limit = 10, int $courseid = 0): array {
         global $DB;
 
         $query = trim($query);
@@ -50,6 +51,9 @@ class student_search {
         }
 
         $courseids = course_access::grade_viewable_courseids();
+        if ($courseid) {
+            $courseids = in_array($courseid, $courseids) ? [$courseid] : [];
+        }
         if (empty($courseids)) {
             return ['students' => [], 'hasmore' => false];
         }
@@ -69,7 +73,7 @@ class student_search {
             return 'u.' . $field;
         }, \core_user\fields::for_name()->get_required_fields()));
 
-        $sql = "SELECT DISTINCT u.id, u.email, {$namefields}
+        $sql = "SELECT DISTINCT u.id, u.email, u.picture, {$namefields}
                   FROM {user} u
                   JOIN {role_assignments} ra ON ra.userid = u.id
                   JOIN {role} r ON r.id = ra.roleid
@@ -101,6 +105,7 @@ class student_search {
                 'id' => (int)$student->id,
                 'fullname' => \fullname($student),
                 'email' => $student->email,
+                'haspicture' => !empty($student->picture),
             ];
         }, $rows));
 

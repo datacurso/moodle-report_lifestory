@@ -30,6 +30,7 @@ require_once($CFG->dirroot . '/grade/report/lib.php');
 // library when the viewer cannot see hidden grades, so it must be loaded here too.
 require_once($CFG->dirroot . '/grade/report/user/lib.php');
 
+use aiprovider_datacurso\local\plugin_settings;
 use report_lifestory\api\client;
 use report_lifestory\event\csv_exported;
 use report_lifestory\event\feedback_generated;
@@ -49,6 +50,7 @@ $searchvalue = optional_param('searchvalue', '', PARAM_TEXT);
 $feedbackraw = optional_param('feedbackraw', '', PARAM_RAW);
 
 require_login();
+plugin_settings::require_enabled('report_lifestory');
 
 if ($courseid) {
     $context = context_course::instance($courseid);

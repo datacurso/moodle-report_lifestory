@@ -121,6 +121,7 @@ final class client_test extends \advanced_testcase {
      * student's real name restored in place of the placeholder.
      */
     public function test_send_to_ai_returns_reply_with_real_name_restored(): void {
+        $this->require_ai_provider();
         $this->mock_ai_service(json_encode(['reply' => "# Hola [STUDENT_NAME]\n\n[STUDENT_NAME] progresa bien."]));
 
         $reply = client::send_to_ai(self::create_payload());
@@ -133,6 +134,7 @@ final class client_test extends \advanced_testcase {
      * MDL-INT-016: A reply without content yields the localized no response text.
      */
     public function test_send_to_ai_without_reply_returns_no_response_string(): void {
+        $this->require_ai_provider();
         $this->mock_ai_service('{}');
 
         $this->assertSame(get_string('noresponse', 'report_lifestory'), client::send_to_ai(self::create_payload()));
@@ -143,6 +145,7 @@ final class client_test extends \advanced_testcase {
      * no response text instead of breaking.
      */
     public function test_send_to_ai_with_non_string_reply_returns_no_response_string(): void {
+        $this->require_ai_provider();
         $this->mock_ai_service(json_encode(['reply' => ['unexpected' => 'shape']]));
 
         $this->assertSame(get_string('noresponse', 'report_lifestory'), client::send_to_ai(self::create_payload()));
@@ -153,6 +156,7 @@ final class client_test extends \advanced_testcase {
      * with a Moodle exception before contacting the analysis service.
      */
     public function test_send_to_ai_without_license_key_throws(): void {
+        $this->require_ai_provider();
         $this->resetAfterTest();
         unset_config('licensekey', 'aiprovider_datacurso');
 
@@ -187,6 +191,7 @@ final class client_test extends \advanced_testcase {
      */
     public function test_provider_site_uuid_is_random_persistent_and_url_independent(): void {
         global $CFG;
+        $this->require_ai_provider();
 
         $this->resetAfterTest();
         unset_config('site_uuid', 'aiprovider_datacurso');
@@ -255,5 +260,17 @@ final class client_test extends \advanced_testcase {
 
         $this->assertSame('Contract item', $payload['courses'][0]['sections'][0]['tasks'][0]['name']);
         $this->assertSame(7.0, $payload['courses'][0]['sections'][0]['tasks'][0]['grade']);
+    }
+
+    /**
+     * Skip when the Datacurso AI provider is absent: the code under test sends through its HTTP client.
+     *
+     * @return void
+     */
+    private function require_ai_provider(): void {
+        // The CI pipeline does not install declared dependencies; without the Datacurso AI provider this test cannot run.
+        if (!class_exists(\aiprovider_datacurso\httpclient\ai_services_api::class)) {
+            $this->markTestSkipped('aiprovider_datacurso is not installed.');
+        }
     }
 }

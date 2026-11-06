@@ -28,7 +28,6 @@ namespace report_lifestory;
 defined('MOODLE_INTERNAL') || die();
 
 global $CFG;
-require_once($CFG->libdir . '/navigationlib.php');
 require_once($CFG->dirroot . '/report/lifestory/lib.php');
 
 /**
@@ -64,6 +63,7 @@ final class lib_test extends \advanced_testcase {
      * navigation entry that opens the report filtered by that course.
      */
     public function test_course_navigation_adds_filtered_report_link_for_authorised_user(): void {
+        $this->require_ai_provider();
         $this->resetAfterTest();
 
         [$course, $context, $viewer] = $this->create_course_and_viewer();
@@ -92,6 +92,7 @@ final class lib_test extends \advanced_testcase {
      * navigation entry.
      */
     public function test_course_navigation_adds_nothing_without_capability(): void {
+        $this->require_ai_provider();
         $this->resetAfterTest();
 
         [$course, $context] = $this->create_course_and_viewer();
@@ -117,5 +118,17 @@ final class lib_test extends \advanced_testcase {
         $this->assertTrue(function_exists('report_lifestory_extend_navigation_course'));
         $this->assertFalse(function_exists('report_lifestory_extend_navigation_user'));
         $this->assertFalse(function_exists('report_lifestory_myprofile_navigation'));
+    }
+
+    /**
+     * Skip when the Datacurso AI provider is absent: the code under test asks it whether this plugin is enabled.
+     *
+     * @return void
+     */
+    private function require_ai_provider(): void {
+        // The CI pipeline does not install declared dependencies; without the Datacurso AI provider this test cannot run.
+        if (!class_exists(\aiprovider_datacurso\local\plugin_settings::class)) {
+            $this->markTestSkipped('aiprovider_datacurso is not installed.');
+        }
     }
 }

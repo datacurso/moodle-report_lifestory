@@ -16,6 +16,7 @@
 
 namespace report_lifestory\external;
 
+use aiprovider_datacurso\local\plugin_settings;
 use core_external\external_api;
 use core_external\external_function_parameters;
 use core_external\external_multiple_structure;
@@ -47,8 +48,11 @@ class search_students extends external_api {
      *
      * @param string $query Search query
      * @return array
+     * @throws \moodle_exception plugindisabled or plugindisabled_admin when the plugin is disabled in the Datacurso AI provider.
      */
     public static function execute($query) {
+        plugin_settings::require_enabled('report_lifestory');
+
         $params = self::validate_parameters(self::execute_parameters(), [
             'query' => $query,
         ]);

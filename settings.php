@@ -27,8 +27,8 @@ use aiprovider_datacurso\local\plugin_settings;
 
 defined('MOODLE_INTERNAL') || die();
 
-// The report entries are hidden while the plugin is disabled in the Datacurso AI provider.
-if (plugin_settings::is_enabled('report_lifestory')) {
+// The report entries are hidden while the plugin is disabled in the Datacurso AI provider, or the provider is missing.
+if (class_exists(plugin_settings::class) && plugin_settings::is_enabled('report_lifestory')) {
     $ADMIN->add('reports', new admin_category(
         'report_lifestory_cat',
         get_string('pluginname', 'report_lifestory')

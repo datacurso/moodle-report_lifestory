@@ -53,6 +53,7 @@ final class plugin_disabled_test extends \advanced_testcase {
      * @return void
      */
     public function test_search_students_answers_when_enabled(): void {
+        $this->require_ai_provider();
         $this->resetAfterTest();
         $this->setAdminUser();
         $this->getDataGenerator()->create_user(['firstname' => 'Lifestorysearch']);
@@ -68,6 +69,7 @@ final class plugin_disabled_test extends \advanced_testcase {
      * @return void
      */
     public function test_search_students_refuses_when_disabled(): void {
+        $this->require_ai_provider();
         $this->resetAfterTest();
         $this->setAdminUser();
         $this->disable_plugin();
@@ -88,6 +90,7 @@ final class plugin_disabled_test extends \advanced_testcase {
      * @return void
      */
     public function test_admin_entries_follow_the_state(): void {
+        $this->require_ai_provider();
         $this->resetAfterTest();
         $this->setAdminUser();
 
@@ -128,6 +131,7 @@ final class plugin_disabled_test extends \advanced_testcase {
      * @return void
      */
     public function test_course_navigation_entry_follows_the_state(): void {
+        $this->require_ai_provider();
         $this->resetAfterTest();
 
         $reporturl = (new \moodle_url('/report/lifestory/index.php'))->out_omit_querystring();
@@ -154,5 +158,17 @@ final class plugin_disabled_test extends \advanced_testcase {
         $this->assertNotFalse($login);
         $this->assertNotFalse($gate);
         $this->assertGreaterThan($login, $gate);
+    }
+
+    /**
+     * Skip when the Datacurso AI provider is absent: the code under test asks it whether this plugin is enabled.
+     *
+     * @return void
+     */
+    private function require_ai_provider(): void {
+        // The CI pipeline does not install declared dependencies; without the Datacurso AI provider this test cannot run.
+        if (!class_exists(\aiprovider_datacurso\local\plugin_settings::class)) {
+            $this->markTestSkipped('aiprovider_datacurso is not installed.');
+        }
     }
 }

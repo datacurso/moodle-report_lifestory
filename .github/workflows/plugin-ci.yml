@@ -2,6 +2,7 @@ name: Moodle Plugin CI
 
 on:
   workflow_dispatch:
+
 jobs:
   test:
     runs-on: ubuntu-22.04

@@ -118,9 +118,11 @@ final class search_students_test extends \externallib_advanced_testcase {
      * pluginfile URL for the profile image of the student.
      */
     public function test_execute_returns_identity_and_profile_image_url(): void {
+        global $DB;
         $this->resetAfterTest();
 
         [, $student, $viewer] = $this->create_fixture();
+        $DB->set_field('user', 'picture', 1, ['id' => $student->id]);
         $this->setUser($viewer);
 
         $result = external_api::clean_returnvalue(
@@ -200,14 +202,17 @@ final class search_students_test extends \externallib_advanced_testcase {
      * fields with the declared types and passes the return value cleaning.
      */
     public function test_execute_result_matches_declared_contract(): void {
+        global $DB;
         $this->resetAfterTest();
 
         [, $student, $viewer] = $this->create_fixture();
+        $DB->set_field('user', 'picture', 1, ['id' => $student->id]);
         $this->setUser($viewer);
 
         $raw = search_students::execute('Alpha');
 
-        $this->assertSame(['students', 'hasmore'], array_keys($raw));
+        $this->assertSame(['students', 'hasmore', 'courseid'], array_keys($raw));
+        $this->assertSame(0, $raw['courseid']);
         $this->assertIsBool($raw['hasmore']);
         $this->assertIsArray($raw['students']);
         $this->assertCount(1, $raw['students']);
@@ -239,7 +244,59 @@ final class search_students_test extends \externallib_advanced_testcase {
 
         $raw = search_students::execute('nobody-matches-this');
 
-        $this->assertSame(['students' => [], 'hasmore' => false], $raw);
+        $this->assertSame(['students' => [], 'hasmore' => false, 'courseid' => 0], $raw);
         $this->assertSame($raw, external_api::clean_returnvalue(search_students::execute_returns(), $raw));
+    }
+
+    /**
+     * MDL-E2E-002: a student without a picture gets an empty image URL so the results show the initial.
+     */
+    public function test_execute_leaves_the_image_url_empty_without_a_picture(): void {
+        $this->resetAfterTest();
+
+        [, , $viewer] = $this->create_fixture();
+        $this->setUser($viewer);
+
+        $result = external_api::clean_returnvalue(
+            search_students::execute_returns(),
+            search_students::execute('Alpha')
+        );
+
+        $this->assertSame('', $result['students'][0]['profileimageurl']);
+    }
+
+    /**
+     * MDL-INT-004: the course filter limits the results to that course and is returned with them.
+     */
+    public function test_execute_accepts_and_returns_the_course_filter(): void {
+        $this->resetAfterTest();
+
+        [$course, $student, $viewer] = $this->create_fixture();
+        $generator = $this->getDataGenerator();
+        $other = $generator->create_course();
+        $generator->enrol_user($viewer->id, $other->id, 'editingteacher');
+        $otherstudent = $generator->create_user(['firstname' => 'Alpha', 'lastname' => 'Other']);
+        $generator->enrol_user($otherstudent->id, $other->id, 'student');
+        $this->setUser($viewer);
+
+        $all = external_api::clean_returnvalue(search_students::execute_returns(), search_students::execute('Alpha'));
+        $this->assertCount(2, $all['students']);
+        $this->assertSame(0, $all['courseid']);
+
+        $filtered = external_api::clean_returnvalue(
+            search_students::execute_returns(),
+            search_students::execute('Alpha', (int)$course->id)
+        );
+        $this->assertSame([(int)$student->id], array_column($filtered['students'], 'id'));
+        $this->assertSame((int)$course->id, $filtered['courseid']);
+
+        // A course where the viewer cannot see grades returns nothing.
+        $hidden = $generator->create_course();
+        $generator->enrol_user($otherstudent->id, $hidden->id, 'student');
+        $none = external_api::clean_returnvalue(
+            search_students::execute_returns(),
+            search_students::execute('Alpha', (int)$hidden->id)
+        );
+        $this->assertSame([], $none['students']);
     }
 }

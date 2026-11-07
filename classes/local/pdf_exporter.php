@@ -124,10 +124,13 @@ class pdf_exporter {
                 $hastasks = true;
             }
 
+            // A course without categories has one section named after it and closed by the course
+            // total, which the document already prints below: show neither of them twice.
+            $repeats = payload_builder::section_repeats_course_total($course, $section);
             $sections[] = [
-                'name' => (string)($section['name'] ?? ''),
+                'name' => $repeats ? '' : (string)($section['name'] ?? ''),
                 'tasks' => $tasks,
-                'total' => self::build_row($section['total'] ?? null),
+                'total' => $repeats ? null : self::build_row($section['total'] ?? null),
             ];
         }
 

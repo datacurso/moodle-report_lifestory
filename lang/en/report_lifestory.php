@@ -69,6 +69,7 @@ $string['privacy:metadata:ai_provider:userid'] = 'A pseudonymised identifier (HM
 $string['privacy:metadata:report_lifestory_feedback'] = 'Stores the latest AI-generated feedback for each student so it can be exported and consulted later.';
 $string['privacy:metadata:report_lifestory_feedback:courseid'] = 'The course filter the feedback was generated under (0 means all courses).';
 $string['privacy:metadata:report_lifestory_feedback:feedback'] = 'The AI-generated feedback text.';
+$string['privacy:metadata:report_lifestory_feedback:scope'] = 'The courses the feedback analysed and those whose hidden grades it included, so it is only shown to users who can see the same grades.';
 $string['privacy:metadata:report_lifestory_feedback:studentid'] = 'The student the feedback is about.';
 $string['privacy:metadata:report_lifestory_feedback:timecreated'] = 'The time the feedback record was created.';
 $string['privacy:metadata:report_lifestory_feedback:timemodified'] = 'The time the feedback record was last modified.';

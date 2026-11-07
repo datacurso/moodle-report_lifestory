@@ -69,6 +69,7 @@ $string['privacy:metadata:ai_provider:userid'] = 'Псевдонимизиров
 $string['privacy:metadata:report_lifestory_feedback'] = 'Хранит последний отзыв, созданный ИИ, для каждого студента, чтобы его можно было экспортировать и просматривать позже.';
 $string['privacy:metadata:report_lifestory_feedback:courseid'] = 'Фильтр курса, с которым был создан отзыв (0 означает все курсы).';
 $string['privacy:metadata:report_lifestory_feedback:feedback'] = 'Текст отзыва, созданного ИИ.';
+$string['privacy:metadata:report_lifestory_feedback:scope'] = 'Курсы, которые проанализировал отзыв, и те, чьи скрытые оценки он включил, чтобы он показывался только пользователям, которые могут видеть те же оценки.';
 $string['privacy:metadata:report_lifestory_feedback:studentid'] = 'Студент, к которому относится отзыв.';
 $string['privacy:metadata:report_lifestory_feedback:timecreated'] = 'Время создания записи отзыва.';
 $string['privacy:metadata:report_lifestory_feedback:timemodified'] = 'Время последнего изменения записи отзыва.';

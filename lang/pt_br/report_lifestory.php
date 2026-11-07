@@ -69,6 +69,7 @@ $string['privacy:metadata:ai_provider:userid'] = 'Um identificador pseudonimizad
 $string['privacy:metadata:report_lifestory_feedback'] = 'Armazena o feedback mais recente gerado por IA para cada estudante, para que possa ser exportado e consultado posteriormente.';
 $string['privacy:metadata:report_lifestory_feedback:courseid'] = 'O filtro de curso com o qual o feedback foi gerado (0 significa todos os cursos).';
 $string['privacy:metadata:report_lifestory_feedback:feedback'] = 'O texto do feedback gerado por IA.';
+$string['privacy:metadata:report_lifestory_feedback:scope'] = 'Os cursos analisados pelo feedback e aqueles cujas notas ocultas ele incluiu, para que seja exibido apenas a usuários que podem ver as mesmas notas.';
 $string['privacy:metadata:report_lifestory_feedback:studentid'] = 'O estudante ao qual o feedback se refere.';
 $string['privacy:metadata:report_lifestory_feedback:timecreated'] = 'A data e hora em que o registro de feedback foi criado.';
 $string['privacy:metadata:report_lifestory_feedback:timemodified'] = 'A data e hora da última modificação do registro de feedback.';

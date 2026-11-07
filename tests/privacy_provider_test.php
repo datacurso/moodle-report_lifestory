@@ -141,6 +141,7 @@ final class privacy_provider_test extends provider_testcase {
             'courseid',
             'feedback',
             'usermodified',
+            'scope',
             'timecreated',
             'timemodified',
         ];

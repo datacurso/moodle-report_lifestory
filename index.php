@@ -108,7 +108,7 @@ $searchhasmore = false;
 $selecteduser = null;
 
 if ($searchvalue !== '') {
-    $searchdata = student_search::search($searchvalue);
+    $searchdata = student_search::search($searchvalue, 10, $courseid);
     $searchresults = $searchdata['students'];
     $searchhasmore = $searchdata['hasmore'];
 }
@@ -131,7 +131,8 @@ $coursesdata = [];
 
 if ($userid) {
     if ($courseid) {
-        if (course_access::can_view_student_grades($courseid, $userid)) {
+        // The filtered course must be one the student is enrolled in, as in the CSV, the PDF and the AI data.
+        if (array_key_exists($courseid, payload_builder::courses($userid, $courseid))) {
             $coursesdata[] = [
                 'id' => $courseid,
                 'fullname' => get_course($courseid)->fullname,
@@ -175,6 +176,8 @@ if ($userid && $action === 'feedback') {
         redirect(new moodle_url('/report/lifestory/index.php', ['userid' => $userid, 'id' => $courseid]));
     }
 
+    $scope = payload_builder::scope($userid, $courseid);
+
     try {
         $response = client::send_to_ai($payload);
 
@@ -194,7 +197,7 @@ if ($userid && $action === 'feedback') {
         }
 
         $feedbackraw = $replytext;
-        $feedbackid = feedback_store::save($userid, $courseid, $replytext);
+        $feedbackid = feedback_store::save($userid, $courseid, $replytext, $scope);
         feedback_generated::create_for_student($userid, $context, $courseid, $feedbackid)->trigger();
         $feedbackhtml = html_writer::div(
             format_text($replytext, FORMAT_MARKDOWN),
@@ -202,12 +205,6 @@ if ($userid && $action === 'feedback') {
         );
         $feedbackdate = userdate(time());
         $hasstoredfeedback = true;
-
-        $cleanurl = (new moodle_url('/report/lifestory/index.php', ['userid' => $userid, 'id' => $courseid]))->out(false);
-        $replacehistoryjs = "if (window.history && window.history.replaceState) {"
-            . " window.history.replaceState(null, document.title, '" . $cleanurl . "');"
-            . ' }';
-        $PAGE->requires->js_init_code($replacehistoryjs);
     } catch (\moodle_exception $e) {
         debugging(get_string('error_ai_service', 'report_lifestory', $e->getMessage()), DEBUG_DEVELOPER);
 
@@ -223,11 +220,19 @@ if ($userid && $action === 'feedback') {
             \core\output\notification::NOTIFY_ERROR
         );
     }
+
+    // Leave the generation request out of the address bar, after a success or an error alike,
+    // so reloading the page shows it again instead of sending a new request to the AI service.
+    $cleanurl = (new moodle_url('/report/lifestory/index.php', ['userid' => $userid, 'id' => $courseid]))->out(false);
+    $replacehistoryjs = "if (window.history && window.history.replaceState) {"
+        . " window.history.replaceState(null, document.title, '" . $cleanurl . "');"
+        . ' }';
+    $PAGE->requires->js_init_code($replacehistoryjs);
 }
 
 // Stored feedback: show the persisted AI feedback when no fresh generation happened.
 if ($userid && $feedbackhtml === null) {
-    $storedrecord = feedback_store::get_record($userid, $courseid);
+    $storedrecord = feedback_store::get_visible_record($userid, $courseid);
     if ($storedrecord) {
         $feedbackhtml = html_writer::div(
             format_text($storedrecord->feedback, FORMAT_MARKDOWN),
@@ -242,7 +247,8 @@ if ($userid && $feedbackhtml === null) {
 if ($userid && $action === 'pdf') {
     require_sesskey();
 
-    $storedfeedback = feedback_store::get($userid, $courseid);
+    $storedrecord = feedback_store::get_visible_record($userid, $courseid);
+    $storedfeedback = $storedrecord === null ? null : $storedrecord->feedback;
 
     if ($storedfeedback === null || $storedfeedback === '') {
         \core\notification::add(
@@ -302,7 +308,18 @@ echo $OUTPUT->footer();
  * @return string Rendered HTML for the grade report.
  */
 function report_lifestory_get_report_html($courseid, $userid) {
-    global $OUTPUT;
+    global $DB, $OUTPUT;
+
+    // A course without any graded activity only has its course total, which the user report
+    // renders as "Error": say that there is no data instead, as the PDF already does.
+    $hasitems = $DB->record_exists_select(
+        'grade_items',
+        "courseid = :courseid AND itemtype IN ('mod', 'manual')",
+        ['courseid' => $courseid]
+    );
+    if (!$hasitems) {
+        return $OUTPUT->notification(get_string('noreportdata', 'report_lifestory'), 'warning');
+    }
 
     $coursecontext = context_course::instance($courseid);
     $gpr = new grade_plugin_return([

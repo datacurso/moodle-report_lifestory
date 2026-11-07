@@ -8,6 +8,14 @@
     font-weight: 600;
 }
 
+/* ====== Search results ====== */
+.report_lifestory-initial {
+    flex: 0 0 40px;
+    width: 40px;
+    height: 40px;
+    font-weight: bold;
+}
+
 /* ====== Action buttons ====== */
 .report_lifestory-actionbuttons {
     display: flex;

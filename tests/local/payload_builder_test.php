@@ -612,8 +612,8 @@ final class payload_builder_test extends \advanced_testcase {
     }
 
     /**
-     * MDL-UNIT-013: Weights and the contribution to the course total are only
-     * reported when greater than zero and stay null otherwise.
+     * MDL-UNIT-013: Weights are only reported when greater than zero, and the contribution to
+     * the course total comes from the aggregation weights, never from the weight override flag.
      */
     public function test_weights_and_contribution_are_null_unless_positive(): void {
         global $DB;
@@ -645,7 +645,8 @@ final class payload_builder_test extends \advanced_testcase {
 
         $task = $this->find_task($payload, 'Weighted item');
         $this->assertSame(25.0, $task['calculated_weight']);
-        $this->assertSame(100.0, $task['contribution_to_total']);
+        // The grades were not aggregated, so there is no aggregation weight to report.
+        $this->assertNull($task['contribution_to_total']);
 
         $task = $this->find_task($payload, 'Unweighted item');
         $this->assertNull($task['calculated_weight']);

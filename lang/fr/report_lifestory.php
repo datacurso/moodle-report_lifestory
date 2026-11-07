@@ -69,6 +69,7 @@ $string['privacy:metadata:ai_provider:userid'] = 'Un identifiant pseudonymisé (
 $string['privacy:metadata:report_lifestory_feedback'] = 'Stocke le dernier retour généré par l’IA pour chaque étudiant afin de pouvoir l’exporter et le consulter ultérieurement.';
 $string['privacy:metadata:report_lifestory_feedback:courseid'] = 'Le filtre de cours avec lequel le retour a été généré (0 signifie tous les cours).';
 $string['privacy:metadata:report_lifestory_feedback:feedback'] = 'Le texte du retour généré par l’IA.';
+$string['privacy:metadata:report_lifestory_feedback:scope'] = 'Les cours analysés par le feedback et ceux dont il a inclus les notes masquées, afin de ne l\'afficher qu\'aux utilisateurs pouvant voir les mêmes notes.';
 $string['privacy:metadata:report_lifestory_feedback:studentid'] = 'L’étudiant concerné par le retour.';
 $string['privacy:metadata:report_lifestory_feedback:timecreated'] = 'La date et l’heure de création de l’enregistrement du retour.';
 $string['privacy:metadata:report_lifestory_feedback:timemodified'] = 'La date et l’heure de la dernière modification de l’enregistrement du retour.';

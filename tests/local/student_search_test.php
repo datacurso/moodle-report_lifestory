@@ -283,6 +283,7 @@ final class student_search_test extends \advanced_testcase {
      * capability.
      */
     public function test_external_search_respects_grade_access_scope(): void {
+        $this->require_ai_provider();
         $this->resetAfterTest();
 
         [$course1, $course2, $student1, $student2, $teacher] = $this->create_courses_and_users();
@@ -401,7 +402,7 @@ final class student_search_test extends \advanced_testcase {
         [$course1] = $this->create_courses_and_users();
 
         $generator = $this->getDataGenerator();
-        // 'q' appears in no other fixture name or generated email address.
+        // The letter 'q' appears in no other fixture name or generated email address.
         $student = $generator->create_user(['firstname' => 'Quirino', 'lastname' => 'Zabaleta']);
         $generator->enrol_user($student->id, $course1->id, 'student');
 
@@ -596,5 +597,17 @@ final class student_search_test extends \advanced_testcase {
      */
     public function test_custom_student_roles_are_recognised(): void {
         $this->markTestSkipped('[Pendiente:skip] only role shortname "student" is recognized');
+    }
+
+    /**
+     * Skip when the Datacurso AI provider is absent: the code under test asks it whether this plugin is enabled.
+     *
+     * @return void
+     */
+    private function require_ai_provider(): void {
+        // The CI pipeline does not install declared dependencies; without the Datacurso AI provider this test cannot run.
+        if (!class_exists(\aiprovider_datacurso\local\plugin_settings::class)) {
+            $this->markTestSkipped('aiprovider_datacurso is not installed.');
+        }
     }
 }

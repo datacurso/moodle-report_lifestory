@@ -1,3 +1,15 @@
+## [1.0.8] - 2026-11-09
+
+**Compatibility note:** This version is compatible from **Moodle 5.0** to **Moodle 5.3**.
+
+### 🚀 Added
+
+- The plugin can be switched off from the Datacurso AI provider (Site administration > AI > Datacurso plugins list > Settings); the plugin has no "Enabled" setting of its own. While it is off, the report category and page under Site administration > Reports and the course navigation entry are hidden, and the report page (including the AI feedback, CSV and PDF exports) and the `report_lifestory_search_students` web service refuse with the Datacurso AI provider's message: users are told to contact the administrator, and site administrators get a link to the provider's plugins list. With the plugin on, nothing changes. Requires `aiprovider_datacurso` 2.2.0 (2026110900) or later for Moodle 5.x, which ships the plugins list settings (`aiprovider_datacurso\local\plugin_settings`).
+
+### 🔄 Changed
+
+- Skip the tests that depend on the Datacurso AI provider when it is not installed, as the CI pipeline does not install declared dependencies
+
 ## [1.0.7] - 2026-11-05
 
 **Compatibility note:** This version is compatible from **Moodle 5.0** to **Moodle 5.3**.

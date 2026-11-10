@@ -38,6 +38,19 @@ require_once($CFG->libdir . '/adminlib.php');
  */
 final class settings_test extends \advanced_testcase {
     /**
+     * Skip the whole class when the Datacurso AI provider is absent.
+     *
+     * @return void
+     */
+    protected function setUp(): void {
+        parent::setUp();
+        // The CI pipeline does not install declared dependencies; without the Datacurso AI provider these tests cannot run.
+        if (!class_exists(\aiprovider_datacurso\local\plugin_settings::class)) {
+            $this->markTestSkipped('aiprovider_datacurso is not installed.');
+        }
+    }
+
+    /**
      * MDL-INT-002: Users with the report capability see the report category
      * and page under Site administration > Reports without the site config
      * capability.

@@ -1,3 +1,29 @@
+## [1.0.7-wp] - 2026-11-10
+
+### 🚀 Added
+
+- Add `\report_lifestory\local\plugin_state`, which asks the Datacurso AI provider whether the report is enabled for the Moodle Workplace tenant of the current user
+- Add PHPUnit coverage for the report disabled in the provider, per tenant (`tests/plugin_disabled_test.php`)
+
+### 🔄 Changed
+
+- The report is switched on and off only from the Datacurso AI provider, per tenant, through `\aiprovider_datacurso\local\plugin_settings`; turning it off for one tenant never affects another tenant
+- The tenant that decides is always the tenant of the current user, never the tenant that owns the course: when a tenant disables the report, none of its users can use it in any course, including courses of another tenant and shared courses, while users of an enabled tenant keep it in every course. This matches billing, as the provider charges each AI call to the tenant of the current user
+- When the report is disabled for the tenant, the report page and the `report_lifestory_search_students` web service refuse with the provider message (`plugindisabled`, or `plugindisabled_admin` for site administrators), and the course navigation entry and the entries under Site administration > Reports are hidden (also hidden while the provider is missing)
+- The minimum required version of `aiprovider_datacurso` is raised to 2026110901 (1.7.0-wp), the first release that keeps the state of the suite plugins per tenant
+- The README states that this branch supports Moodle Workplace 4.5 only and requires the Datacurso AI provider 1.7.0-wp or later
+- No upgrade step is needed: the report never had an "Enabled" setting of its own, so it stays enabled until it is switched off in the provider
+
+### ⚠️ Deprecated
+
+### ❌ Removed
+
+### 🐞 Fixed
+
+- Skip the PHPUnit tests that reach the provider when `aiprovider_datacurso` is not installed, as the CI pipeline does not install declared dependencies
+
+### 🔐 Security
+
 ## [1.0.6-wp] - 2026-10-08
 
 ### 🚀 Added

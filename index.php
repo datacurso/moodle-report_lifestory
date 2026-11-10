@@ -40,6 +40,7 @@ use report_lifestory\local\csv_exporter;
 use report_lifestory\local\feedback_store;
 use report_lifestory\local\payload_builder;
 use report_lifestory\local\pdf_exporter;
+use report_lifestory\local\plugin_state;
 use report_lifestory\local\student_search;
 
 $userid = optional_param('userid', 0, PARAM_INT);
@@ -49,6 +50,8 @@ $searchvalue = optional_param('searchvalue', '', PARAM_TEXT);
 $feedbackraw = optional_param('feedbackraw', '', PARAM_RAW);
 
 require_login();
+// Refuse while the report is disabled in the Datacurso AI provider for the tenant of the viewer, whatever the course.
+plugin_state::require_enabled();
 
 if ($courseid) {
     $context = context_course::instance($courseid);

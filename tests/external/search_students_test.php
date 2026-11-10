@@ -42,6 +42,19 @@ use core_external\external_api;
  */
 final class search_students_test extends \externallib_advanced_testcase {
     /**
+     * Skip the whole class when the Datacurso AI provider is absent.
+     *
+     * @return void
+     */
+    protected function setUp(): void {
+        parent::setUp();
+        // The CI pipeline does not install declared dependencies; without the Datacurso AI provider these tests cannot run.
+        if (!class_exists(\aiprovider_datacurso\local\plugin_settings::class)) {
+            $this->markTestSkipped('aiprovider_datacurso is not installed.');
+        }
+    }
+
+    /**
      * Creates a course with a student and a viewer holding both the report
      * view capability and grade access in the course.
      *

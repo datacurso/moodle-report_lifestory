@@ -22,6 +22,8 @@
  * @license     https://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
+use report_lifestory\local\plugin_state;
+
 /**
  * Extends the course navigation with a link to the life story report.
  *
@@ -34,7 +36,9 @@
  * @return void
  */
 function report_lifestory_extend_navigation_course(navigation_node $navigation, stdClass $course, context $context): void {
-    if (!has_capability('report/lifestory:view', $context)) {
+    // Nothing is added while the report is disabled in the Datacurso AI provider for the tenant of the viewer,
+    // whatever tenant owns the course.
+    if (!plugin_state::is_enabled() || !has_capability('report/lifestory:view', $context)) {
         return;
     }
 

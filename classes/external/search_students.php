@@ -21,6 +21,7 @@ use core_external\external_function_parameters;
 use core_external\external_multiple_structure;
 use core_external\external_single_structure;
 use core_external\external_value;
+use report_lifestory\local\plugin_state;
 use report_lifestory\local\student_search;
 
 /**
@@ -47,8 +48,13 @@ class search_students extends external_api {
      *
      * @param string $query Search query
      * @return array
+     * @throws \moodle_exception plugindisabled or plugindisabled_admin when the report is disabled in the
+     *     Datacurso AI provider for the tenant of the caller.
      */
     public static function execute($query) {
+        // The tenant of the caller always applies.
+        plugin_state::require_enabled();
+
         $params = self::validate_parameters(self::execute_parameters(), [
             'query' => $query,
         ]);

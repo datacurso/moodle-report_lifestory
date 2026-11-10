@@ -25,11 +25,11 @@
 defined('MOODLE_INTERNAL') || die();
 
 $plugin->component = 'report_lifestory';
-$plugin->release = '1.0.6-wp';
-$plugin->version = 2026100800;
+$plugin->release = '1.0.7-wp';
+$plugin->version = 2026110902;
 $plugin->requires = 2024100700;
 $plugin->maturity = MATURITY_STABLE;
 $plugin->supported = [405, 405];
 $plugin->dependencies = [
-    'aiprovider_datacurso' => 2025100201,
+    'aiprovider_datacurso' => 2026110901,
 ];

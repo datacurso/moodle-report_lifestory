@@ -1,3 +1,19 @@
+## [2.0.0] - 2026-11-12
+
+**Compatibility note:** This version is compatible from **Moodle 5.0** to **Moodle 5.3**.
+
+### 🔄 Changed
+
+- CI runs on Jenkins only, against Moodle 5.3 (mariadb)
+
+### ❌ Removed
+
+- Remove the GitHub Actions workflows (`plugin-ci.yml` and `moodle-release.yml`)
+
+### 🐞 Fixed
+
+- Send the grade items of each course and category to the AI service in gradebook order, so the payload no longer depends on the database row order (it differed on PostgreSQL)
+
 ## [1.0.8] - 2026-11-09
 
 **Compatibility note:** This version is compatible from **Moodle 5.0** to **Moodle 5.3**.

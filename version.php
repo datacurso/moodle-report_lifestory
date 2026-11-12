@@ -25,8 +25,8 @@
 defined('MOODLE_INTERNAL') || die();
 
 $plugin->component = 'report_lifestory';
-$plugin->release = '1.0.8';
-$plugin->version = 2026110900;
+$plugin->release = '2.0.0';
+$plugin->version = 2026111201;
 $plugin->requires = 2025041400;
 $plugin->maturity = MATURITY_STABLE;
 $plugin->supported = [500, 503];

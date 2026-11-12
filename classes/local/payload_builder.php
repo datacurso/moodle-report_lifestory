@@ -286,6 +286,7 @@ class payload_builder {
                 }
 
                 $items = \grade_item::fetch_all(['categoryid' => $cat->id]) ?: [];
+                self::sort_by_gradebook_order($items);
                 $categoryitem = \grade_item::fetch(['iteminstance' => $cat->id, 'itemtype' => 'category']);
                 if (!$items && !$categoryitem) {
                     continue;
@@ -321,6 +322,7 @@ class payload_builder {
             }
 
             $courseitems = \grade_item::fetch_all(['courseid' => $course->id]) ?: [];
+            self::sort_by_gradebook_order($courseitems);
             $courseitem = null;
             foreach ($courseitems as $item) {
                 if ($item->itemtype === 'course') {
@@ -361,5 +363,14 @@ class payload_builder {
         }
 
         return $payload;
+    }
+
+    /**
+     * Sorts grade items in gradebook order, since fetch_all() returns them in database order.
+     *
+     * @param \grade_item[] $items Grade items keyed by id.
+     */
+    private static function sort_by_gradebook_order(array &$items): void {
+        uasort($items, static fn(\grade_item $a, \grade_item $b): int => $a->sortorder <=> $b->sortorder);
     }
 }

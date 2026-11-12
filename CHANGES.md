@@ -18,6 +18,7 @@
 - Lock the "Generate AI feedback" button in the same click so a double click no longer sends two generation requests
 - Require the student to be enrolled in the filtered course before showing its grades and the generate and CSV buttons
 - Show "No report data available." for a course without graded activities instead of a course total with "Error"
+- Send the grade items of each course and category to the AI service in gradebook order, so the payload no longer depends on the database row order (it differed on PostgreSQL)
 
 ## [1.0.7-wp] - 2026-11-10
 

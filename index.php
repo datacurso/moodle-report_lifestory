@@ -133,7 +133,8 @@ $coursesdata = [];
 
 if ($userid) {
     if ($courseid) {
-        if (course_access::can_view_student_grades($courseid, $userid)) {
+        // The filtered course must be one the student is enrolled in, as in the CSV, the PDF and the AI data.
+        if (array_key_exists($courseid, payload_builder::courses($userid, $courseid))) {
             $coursesdata[] = [
                 'id' => $courseid,
                 'fullname' => get_course($courseid)->fullname,
@@ -177,6 +178,8 @@ if ($userid && $action === 'feedback') {
         redirect(new moodle_url('/report/lifestory/index.php', ['userid' => $userid, 'id' => $courseid]));
     }
 
+    $scope = payload_builder::scope($userid, $courseid);
+
     try {
         $response = client::send_to_ai($payload);
 
@@ -196,7 +199,7 @@ if ($userid && $action === 'feedback') {
         }
 
         $feedbackraw = $replytext;
-        $feedbackid = feedback_store::save($userid, $courseid, $replytext);
+        $feedbackid = feedback_store::save($userid, $courseid, $replytext, $scope);
         feedback_generated::create_for_student($userid, $context, $courseid, $feedbackid)->trigger();
         $feedbackhtml = html_writer::div(
             format_text($replytext, FORMAT_MARKDOWN),
@@ -229,7 +232,7 @@ if ($userid && $action === 'feedback') {
 
 // Stored feedback: show the persisted AI feedback when no fresh generation happened.
 if ($userid && $feedbackhtml === null) {
-    $storedrecord = feedback_store::get_record($userid, $courseid);
+    $storedrecord = feedback_store::get_visible_record($userid, $courseid);
     if ($storedrecord) {
         $feedbackhtml = html_writer::div(
             format_text($storedrecord->feedback, FORMAT_MARKDOWN),
@@ -244,7 +247,8 @@ if ($userid && $feedbackhtml === null) {
 if ($userid && $action === 'pdf') {
     require_sesskey();
 
-    $storedfeedback = feedback_store::get($userid, $courseid);
+    $storedrecord = feedback_store::get_visible_record($userid, $courseid);
+    $storedfeedback = $storedrecord === null ? null : $storedrecord->feedback;
 
     if ($storedfeedback === null || $storedfeedback === '') {
         \core\notification::add(
@@ -304,7 +308,18 @@ echo $OUTPUT->footer();
  * @return string Rendered HTML for the grade report.
  */
 function report_lifestory_get_report_html($courseid, $userid) {
-    global $OUTPUT;
+    global $DB, $OUTPUT;
+
+    // A course without any graded activity only has its course total, which the user report
+    // renders as "Error": say that there is no data instead, as the PDF already does.
+    $hasitems = $DB->record_exists_select(
+        'grade_items',
+        "courseid = :courseid AND itemtype IN ('mod', 'manual')",
+        ['courseid' => $courseid]
+    );
+    if (!$hasitems) {
+        return $OUTPUT->notification(get_string('noreportdata', 'report_lifestory'), 'warning');
+    }
 
     $coursecontext = context_course::instance($courseid);
     $gpr = new grade_plugin_return([

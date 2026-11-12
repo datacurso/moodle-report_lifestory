@@ -35,17 +35,17 @@ export const init = () => {
 
             e.preventDefault();
 
+            // Lock the button in the same click, before anything is awaited: a second click
+            // arriving while the loader text loads would otherwise start a second generation.
+            button.classList.add('report_lifestory-btnloading');
+            button.setAttribute("aria-disabled", "true");
+            button.style.pointerEvents = "none";
+
             const redirect = button.href || button.dataset.redirect;
             const originalText = button.textContent.trim();
             button.dataset.originalText = originalText;
 
-            const loaderText = await Str.get_string('generatingfeedback', 'report_lifestory');
-
-            // Show loader
-            button.classList.add('report_lifestory-btnloading');
-            button.setAttribute("aria-disabled", "true");
-            button.style.pointerEvents = "none";
-            button.textContent = loaderText;
+            button.textContent = await Str.get_string('generatingfeedback', 'report_lifestory');
 
             if (!redirect) {
                 return;

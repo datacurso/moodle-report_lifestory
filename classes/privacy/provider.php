@@ -73,6 +73,7 @@ class provider implements
                 'courseid' => 'privacy:metadata:report_lifestory_feedback:courseid',
                 'feedback' => 'privacy:metadata:report_lifestory_feedback:feedback',
                 'usermodified' => 'privacy:metadata:report_lifestory_feedback:usermodified',
+                'scope' => 'privacy:metadata:report_lifestory_feedback:scope',
                 'timecreated' => 'privacy:metadata:report_lifestory_feedback:timecreated',
                 'timemodified' => 'privacy:metadata:report_lifestory_feedback:timemodified',
             ],

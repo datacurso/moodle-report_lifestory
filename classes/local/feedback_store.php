@@ -38,9 +38,10 @@ class feedback_store {
      * @param int $studentid The id of the student the feedback is about.
      * @param int $courseid The course filter used for generation (0 means all courses).
      * @param string $feedback The AI-generated feedback text to store.
+     * @param array|null $scope What the generation analysed ({@see payload_builder::scope()}).
      * @return int The id of the stored feedback record.
      */
-    public static function save(int $studentid, int $courseid, string $feedback): int {
+    public static function save(int $studentid, int $courseid, string $feedback, ?array $scope = null): int {
         global $DB, $USER;
 
         $now = time();
@@ -48,6 +49,7 @@ class feedback_store {
 
         if ($record) {
             $record->feedback = $feedback;
+            $record->scope = $scope === null ? null : json_encode($scope);
             $record->usermodified = $USER->id;
             $record->timemodified = $now;
             $DB->update_record('report_lifestory_feedback', $record);
@@ -58,6 +60,7 @@ class feedback_store {
             'studentid' => $studentid,
             'courseid' => $courseid,
             'feedback' => $feedback,
+            'scope' => $scope === null ? null : json_encode($scope),
             'usermodified' => $USER->id,
             'timecreated' => $now,
             'timemodified' => $now,
@@ -94,5 +97,60 @@ class feedback_store {
         );
 
         return $record === false ? null : $record;
+    }
+
+    /**
+     * The stored feedback record, only when the current user may read it.
+     *
+     * A feedback analyses the grades its author could see. It is only shown to a user who can
+     * see the grades of every course it analysed and, where it included hidden grades, can see
+     * hidden grades there too; anyone else gets no stored feedback and may generate their own.
+     *
+     * @param int $studentid The id of the student the feedback is about.
+     * @param int $courseid The course filter used for generation (0 means all courses).
+     * @return \stdClass|null The record, or null when there is none or it may not be read.
+     */
+    public static function get_visible_record(int $studentid, int $courseid): ?\stdClass {
+        $record = self::get_record($studentid, $courseid);
+        if ($record === null || !self::can_read($record)) {
+            return null;
+        }
+        return $record;
+    }
+
+    /**
+     * Whether the current user may read a stored feedback record.
+     *
+     * Records saved before the scope was recorded are treated as covering every course of the
+     * student under the same filter, hidden grades included.
+     *
+     * @param \stdClass $record A report_lifestory_feedback record.
+     * @return bool
+     */
+    public static function can_read(\stdClass $record): bool {
+        $studentid = (int)$record->studentid;
+        $scope = empty($record->scope) ? null : json_decode($record->scope, true);
+
+        if (!is_array($scope)) {
+            $courseids = array_map('intval', array_keys(\enrol_get_users_courses($studentid)));
+            if ((int)$record->courseid > 0) {
+                $courseids = array_values(array_intersect($courseids, [(int)$record->courseid]));
+            }
+            $scope = ['courses' => $courseids, 'hidden' => $courseids];
+        }
+
+        foreach ($scope['courses'] ?? [] as $courseid) {
+            $context = \context_course::instance((int)$courseid, IGNORE_MISSING);
+            if ($context && !course_access::can_view_student_grades((int)$courseid, $studentid)) {
+                return false;
+            }
+        }
+        foreach ($scope['hidden'] ?? [] as $courseid) {
+            $context = \context_course::instance((int)$courseid, IGNORE_MISSING);
+            if ($context && !has_capability('moodle/grade:viewhidden', $context)) {
+                return false;
+            }
+        }
+        return true;
     }
 }

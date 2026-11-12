@@ -42,33 +42,14 @@ class payload_builder {
     }
 
     /**
-     * Computes the range label and the percentage of a grade the way the user
-     * grade report displays them.
+     * Build the range label and the percentage of a grade within its bounds.
      *
-     * The bounds come from the user's grade when one exists: for category and
-     * course totals whose category aggregates only graded items, Moodle stores
-     * the per-user minimum and maximum in the grade record, which may differ
-     * from the grade item bounds. Plain items yield their own bounds, and when
-     * the user has no grade the grade item bounds are used.
-     *
-     * @param \grade_item $item Grade item the grade belongs to.
-     * @param \grade_grade|null $grade User grade record, null when not graded.
-     * @return array Two-element list: range label "min-max" and percentage (null when not computable).
+     * @param float|null $finalgrade The grade, or null when there is none.
+     * @param float $min The lowest possible grade.
+     * @param float $max The highest possible grade.
+     * @return array [range string, percentage or null]
      */
-    private static function range_and_percentage(\grade_item $item, ?\grade_grade $grade): array {
-        $min = (float)$item->grademin;
-        $max = (float)$item->grademax;
-        $finalgrade = null;
-
-        if ($grade) {
-            $finalgrade = $grade->finalgrade === null ? null : (float)$grade->finalgrade;
-            if ($finalgrade !== null) {
-                $grade->grade_item = $item;
-                $min = (float)$grade->get_grade_min();
-                $max = (float)$grade->get_grade_max();
-            }
-        }
-
+    private static function range_and_percentage(?float $finalgrade, float $min, float $max): array {
         $minlabel = $min == 0 ? '0' : number_format($min, 2);
         $range = $minlabel . '-' . number_format($max, 2);
         $percentage = ($max > $min && $finalgrade !== null)
@@ -76,6 +57,78 @@ class payload_builder {
             : null;
 
         return [$range, $percentage];
+    }
+
+    /**
+     * Describe one activity grade.
+     *
+     * @param \grade_item $item The activity grade item.
+     * @param \grade_grade|null $grade The student's grade, if any.
+     * @param \context_course $coursecontext The course context.
+     * @return array
+     */
+    private static function task_entry(\grade_item $item, ?\grade_grade $grade, \context_course $coursecontext): array {
+        $finalgrade = ($grade && $grade->finalgrade !== null) ? (float)$grade->finalgrade : null;
+        $min = (float)$item->grademin;
+        $max = (float)$item->grademax;
+        if ($grade && $finalgrade !== null) {
+            $grade->grade_item = $item;
+            $min = (float)$grade->get_grade_min();
+            $max = (float)$grade->get_grade_max();
+        }
+        [$range, $percentage] = self::range_and_percentage($finalgrade, $min, $max);
+
+        return [
+            'name' => \format_string($item->get_name(), true, ['context' => $coursecontext]),
+            'calculated_weight' => ($item->aggregationcoef2 ?? 0) > 0 ? round($item->aggregationcoef2 * 100, 2) : null,
+            'grade' => $finalgrade,
+            'range' => $range,
+            'percentage' => $percentage,
+            'feedback' => self::safe_feedback($grade),
+            'contribution_to_total' => isset($item->weightoverride) && $item->weightoverride > 0
+                ? round($item->weightoverride * 100, 2)
+                : null,
+        ];
+    }
+
+    /**
+     * Describe a category or course total as the current user may see it.
+     *
+     * A total the user is not meant to see keeps its name with every value empty, like a
+     * missing total, so the service cannot work out a hidden grade from it.
+     *
+     * @param \grade_item $item The category or course grade item.
+     * @param \grade_grade|null $grade The student's grade for that item, if any.
+     * @param grade_visibility $visibility Hidden grade rules of the course.
+     * @param \context_course $coursecontext The course context.
+     * @param bool $withweight Whether to include the calculated weight of the item.
+     * @return array
+     */
+    private static function total_entry(
+        \grade_item $item,
+        ?\grade_grade $grade,
+        grade_visibility $visibility,
+        \context_course $coursecontext,
+        bool $withweight
+    ): array {
+        $name = \format_string($item->get_name(), true, ['context' => $coursecontext]);
+        $value = $visibility->total($item, $grade);
+        if ($value === null) {
+            return self::missing_total($name);
+        }
+        [$range, $percentage] = self::range_and_percentage($value['grade'], $value['min'], $value['max']);
+
+        return [
+            'name' => $name,
+            'calculated_weight' => $withweight && ($item->aggregationcoef2 ?? 0) > 0
+                ? round($item->aggregationcoef2 * 100, 2)
+                : null,
+            'grade' => $value['grade'],
+            'range' => $range,
+            'percentage' => $percentage,
+            'feedback' => self::safe_feedback($grade),
+            'contribution_to_total' => null,
+        ];
     }
 
     /**
@@ -101,16 +154,56 @@ class payload_builder {
     }
 
     /**
-     * Builds the payload with all student information.
+     * The courses of the student the current user may analyse, optionally limited to one.
      *
-     * The course list is always restricted to the courses where the current
-     * user can view the student's grades. When a course id is given, the
-     * payload is further limited to that single course, and only if it
-     * survived the permission filter.
+     * The same list rules the page, the CSV, the PDF and the data sent to the AI service.
      *
-     * @param int $userid Moodle user ID.
-     * @param int $courseid Course id to restrict the payload to, 0 for all permitted courses.
-     * @return array Student data payload.
+     * @param int $userid The student.
+     * @param int $courseid Course filter, 0 for every course.
+     * @return array Course records indexed by id.
+     */
+    public static function courses(int $userid, int $courseid = 0): array {
+        $courses = course_access::filter_courses(\enrol_get_users_courses($userid), $userid);
+        if ($courseid > 0) {
+            $courses = array_filter($courses, static function ($course) use ($courseid): bool {
+                return (int)$course->id === $courseid;
+            });
+        }
+        return $courses;
+    }
+
+    /**
+     * What a generation analyses, to decide later who may read its feedback.
+     *
+     * @param int $userid The student.
+     * @param int $courseid Course filter, 0 for every course.
+     * @return array ['courses' => course ids, 'hidden' => course ids whose hidden grades were included]
+     */
+    public static function scope(int $userid, int $courseid = 0): array {
+        global $CFG;
+        require_once($CFG->libdir . '/gradelib.php');
+
+        $scope = ['courses' => [], 'hidden' => []];
+        foreach (self::courses($userid, $courseid) as $course) {
+            $scope['courses'][] = (int)$course->id;
+            if (has_capability('moodle/grade:viewhidden', \context_course::instance($course->id))) {
+                $scope['hidden'][] = (int)$course->id;
+            }
+        }
+        sort($scope['courses']);
+        sort($scope['hidden']);
+        return $scope;
+    }
+
+    /**
+     * Build the payload sent to the AI service for a student, as the current user may see it.
+     *
+     * Grades hidden from the current user are left out, and totals that would give them away
+     * follow the course setting for totals containing hidden items ({@see grade_visibility}).
+     *
+     * @param int $userid The student.
+     * @param int $courseid Course filter, 0 for every course.
+     * @return array
      */
     public static function build(int $userid, int $courseid = 0): array {
         global $DB, $CFG, $USER;
@@ -118,13 +211,6 @@ class payload_builder {
         require_once($CFG->libdir . '/gradelib.php');
 
         $user = $DB->get_record('user', ['id' => $userid], '*', MUST_EXIST);
-        $courses = course_access::filter_courses(\enrol_get_users_courses($userid), $userid);
-
-        if ($courseid > 0) {
-            $courses = array_filter($courses, static function ($course) use ($courseid): bool {
-                return (int)$course->id === $courseid;
-            });
-        }
 
         $payload = [
             'userid' => (string)$USER->id,
@@ -133,173 +219,86 @@ class payload_builder {
             'courses' => [],
         ];
 
-        foreach ($courses as $course) {
+        foreach (self::courses($userid, $courseid) as $course) {
             $coursecontext = \context_course::instance($course->id);
+            $visibility = new grade_visibility((int)$course->id, $userid);
             $sections = [];
 
             $categories = \grade_category::fetch_all(['courseid' => $course->id]);
             $hascategories = false;
 
-            if ($categories) {
-                foreach ($categories as $cat) {
-                    if ($cat->is_course_category()) {
-                        continue;
-                    }
-
-                    $items = \grade_item::fetch_all(['categoryid' => $cat->id]);
-                    $categoryitem = \grade_item::fetch(['iteminstance' => $cat->id, 'itemtype' => 'category']);
-                    if (!$items && !$categoryitem) {
-                        continue;
-                    }
-
-                    $hascategories = true;
-                    $tasks = [];
-                    $total = null;
-
-                    foreach ($items as $item) {
-                        if ($item->itemtype === 'category') {
-                            continue;
-                        }
-                        if (!in_array($item->itemtype, ['mod', 'manual'])) {
-                            continue;
-                        }
-
-                        $grade = \grade_grade::fetch(['itemid' => $item->id, 'userid' => $userid]);
-                        $finalgrade = $grade ? (float)$grade->finalgrade : null;
-                        [$range, $percentage] = self::range_and_percentage($item, $grade ?: null);
-                        $feedback = self::safe_feedback($grade);
-
-                        $weight = ($item->aggregationcoef2 ?? 0) > 0
-                            ? round($item->aggregationcoef2 * 100, 2)
-                            : null;
-
-                        $contribution = isset($item->weightoverride) && $item->weightoverride > 0
-                            ? round($item->weightoverride * 100, 2)
-                            : null;
-
-                        $tasks[] = [
-                            'name' => \format_string($item->get_name(), true, ['context' => $coursecontext]),
-                            'calculated_weight' => $weight,
-                            'grade' => $finalgrade,
-                            'range' => $range,
-                            'percentage' => $percentage,
-                            'feedback' => $feedback,
-                            'contribution_to_total' => $contribution,
-                        ];
-                    }
-
-                    if ($categoryitem) {
-                        $grade = \grade_grade::fetch(['itemid' => $categoryitem->id, 'userid' => $userid]);
-                        $finalgrade = $grade ? (float)$grade->finalgrade : null;
-                        [$range, $percentage] = self::range_and_percentage($categoryitem, $grade ?: null);
-                        $feedback = self::safe_feedback($grade);
-
-                        $total = [
-                            'name' => \format_string($categoryitem->get_name(), true, ['context' => $coursecontext]),
-                            'calculated_weight' => ($categoryitem->aggregationcoef2 ?? 0) > 0
-                                ? round($categoryitem->aggregationcoef2 * 100, 2)
-                                : null,
-                            'grade' => $finalgrade,
-                            'range' => $range,
-                            'percentage' => $percentage,
-                            'feedback' => $feedback,
-                            'contribution_to_total' => null,
-                        ];
-                    }
-
-                    if (!empty($tasks) || $total) {
-                        $sections[] = [
-                            'name' => \format_string($cat->get_name(), true, ['context' => $coursecontext]),
-                            'tasks' => $tasks,
-                            'total' => $total ?? self::missing_total('Total not available'),
-                        ];
-                    }
+            foreach ($categories ?: [] as $cat) {
+                if ($cat->is_course_category()) {
+                    continue;
                 }
-            }
 
-            if (!$hascategories) {
-                $items = \grade_item::fetch_all(['courseid' => $course->id]) ?: [];
+                $items = \grade_item::fetch_all(['categoryid' => $cat->id]) ?: [];
+                self::sort_by_gradebook_order($items);
+                $categoryitem = \grade_item::fetch(['iteminstance' => $cat->id, 'itemtype' => 'category']);
+                if (!$items && !$categoryitem) {
+                    continue;
+                }
+
+                $hascategories = true;
                 $tasks = [];
                 $total = null;
 
                 foreach ($items as $item) {
-                    if (!in_array($item->itemtype, ['mod', 'manual', 'course'])) {
+                    if (!in_array($item->itemtype, ['mod', 'manual'])) {
                         continue;
                     }
-
-                    if ($item->itemtype === 'course') {
-                        $grade = \grade_grade::fetch(['itemid' => $item->id, 'userid' => $userid]);
-                        $finalgrade = $grade ? (float)$grade->finalgrade : null;
-                        [$range, $percentage] = self::range_and_percentage($item, $grade ?: null);
-                        $feedback = self::safe_feedback($grade);
-
-                        $total = [
-                            'name' => \format_string($item->get_name(), true, ['context' => $coursecontext]),
-                            'calculated_weight' => null,
-                            'grade' => $finalgrade,
-                            'range' => $range,
-                            'percentage' => $percentage,
-                            'feedback' => $feedback,
-                            'contribution_to_total' => null,
-                        ];
+                    $grade = \grade_grade::fetch(['itemid' => $item->id, 'userid' => $userid]) ?: null;
+                    if ($visibility->hides_item($item, $grade)) {
                         continue;
                     }
+                    $tasks[] = self::task_entry($item, $grade, $coursecontext);
+                }
 
-                    $grade = \grade_grade::fetch(['itemid' => $item->id, 'userid' => $userid]);
-                    $finalgrade = $grade ? (float)$grade->finalgrade : null;
-                    [$range, $percentage] = self::range_and_percentage($item, $grade ?: null);
-                    $feedback = self::safe_feedback($grade);
-
-                    $weight = ($item->aggregationcoef2 ?? 0) > 0
-                        ? round($item->aggregationcoef2 * 100, 2)
-                        : null;
-
-                    $contribution = isset($item->weightoverride) && $item->weightoverride > 0
-                        ? round($item->weightoverride * 100, 2)
-                        : null;
-
-                    $tasks[] = [
-                        'name' => \format_string($item->get_name(), true, ['context' => $coursecontext]),
-                        'calculated_weight' => $weight,
-                        'grade' => $finalgrade,
-                        'range' => $range,
-                        'percentage' => $percentage,
-                        'feedback' => $feedback,
-                        'contribution_to_total' => $contribution,
-                    ];
+                if ($categoryitem) {
+                    $grade = \grade_grade::fetch(['itemid' => $categoryitem->id, 'userid' => $userid]) ?: null;
+                    $total = self::total_entry($categoryitem, $grade, $visibility, $coursecontext, true);
                 }
 
                 if (!empty($tasks) || $total) {
                     $sections[] = [
-                        'name' => $course->fullname,
+                        'name' => \format_string($cat->get_name(), true, ['context' => $coursecontext]),
                         'tasks' => $tasks,
                         'total' => $total ?? self::missing_total('Total not available'),
                     ];
                 }
             }
 
-            $courseitems = \grade_item::fetch_all(['courseid' => $course->id]);
-            $coursetotal = null;
+            $courseitems = \grade_item::fetch_all(['courseid' => $course->id]) ?: [];
+            self::sort_by_gradebook_order($courseitems);
+            $courseitem = null;
+            foreach ($courseitems as $item) {
+                if ($item->itemtype === 'course') {
+                    $courseitem = $item;
+                    break;
+                }
+            }
+            $coursegrade = $courseitem ? (\grade_grade::fetch(['itemid' => $courseitem->id, 'userid' => $userid]) ?: null) : null;
+            $coursetotal = $courseitem ? self::total_entry($courseitem, $coursegrade, $visibility, $coursecontext, false) : null;
 
-            if ($courseitems) {
+            if (!$hascategories) {
+                $tasks = [];
                 foreach ($courseitems as $item) {
-                    if ($item->itemtype === 'course') {
-                        $grade = \grade_grade::fetch(['itemid' => $item->id, 'userid' => $userid]);
-                        $finalgrade = $grade ? (float)$grade->finalgrade : null;
-                        [$range, $percentage] = self::range_and_percentage($item, $grade ?: null);
-                        $feedback = self::safe_feedback($grade);
-
-                        $coursetotal = [
-                            'name' => \format_string($item->get_name(), true, ['context' => $coursecontext]),
-                            'calculated_weight' => null,
-                            'grade' => $finalgrade,
-                            'range' => $range,
-                            'percentage' => $percentage,
-                            'feedback' => $feedback,
-                            'contribution_to_total' => null,
-                        ];
-                        break;
+                    if (!in_array($item->itemtype, ['mod', 'manual'])) {
+                        continue;
                     }
+                    $grade = \grade_grade::fetch(['itemid' => $item->id, 'userid' => $userid]) ?: null;
+                    if ($visibility->hides_item($item, $grade)) {
+                        continue;
+                    }
+                    $tasks[] = self::task_entry($item, $grade, $coursecontext);
+                }
+
+                if (!empty($tasks) || $coursetotal) {
+                    $sections[] = [
+                        'name' => $course->fullname,
+                        'tasks' => $tasks,
+                        'total' => $coursetotal ?? self::missing_total('Total not available'),
+                    ];
                 }
             }
 
@@ -311,5 +310,14 @@ class payload_builder {
         }
 
         return $payload;
+    }
+
+    /**
+     * Sorts grade items in gradebook order, since fetch_all() returns them in database order.
+     *
+     * @param \grade_item[] $items Grade items keyed by id.
+     */
+    private static function sort_by_gradebook_order(array &$items): void {
+        uasort($items, static fn(\grade_item $a, \grade_item $b): int => $a->sortorder <=> $b->sortorder);
     }
 }

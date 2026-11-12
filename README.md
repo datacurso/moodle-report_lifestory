@@ -9,7 +9,7 @@ The system combines quantitative data (grades, percentages, progress) with quali
 
 ## Pre-requisites
 
-1. Moodle 4.5
+1. Moodle 4.5 (this branch supports Moodle 4.5 only)
 2. Install the Moodle AI provider "DataCurso AI Provider". Download it for free from [https://moodle.org/plugins/aiprovider_datacurso/versions](https://moodle.org/plugins/aiprovider_datacurso/versions).
 3. In the DataCurso AI Provider settings, configure a valid license key as documented at [https://docs.datacurso.com/index.php?title=Datacurso_AI_Provider#Getting_license_keys](https://docs.datacurso.com/index.php?title=Datacurso_AI_Provider#Getting_license_keys).
 

@@ -1,3 +1,25 @@
+## [1.0.8-wp] - 2026-11-12
+
+**Compatibility note:** This version is compatible only with **Moodle Workplace 4.5**.
+
+### 🔄 Changed
+
+- CI runs on Jenkins only, against Moodle 4.5 (`moodleBranch: 'MOODLE_405_STABLE'`)
+
+### ❌ Removed
+
+- Remove the GitHub Actions plugin CI workflow (`plugin-ci.yml`)
+
+### 🐞 Fixed
+
+- Leave hidden grades out of the data sent to the AI service when the requester cannot see them, and hide, recalculate or keep course and category totals that contain them following the course setting "Hide totals if they contain hidden items"
+- Record the scope of each stored AI feedback (analysed courses and courses where hidden grades were included) in the new `scope` field of `report_lifestory_feedback`, added by the upgrade step 2026111200
+- Show a stored AI feedback, on the page and in the PDF, only to users who can see the grades of every course it analysed and, where it included hidden grades, those hidden grades
+- Lock the "Generate AI feedback" button in the same click so a double click no longer sends two generation requests
+- Require the student to be enrolled in the filtered course before showing its grades and the generate and CSV buttons
+- Show "No report data available." for a course without graded activities instead of a course total with "Error"
+- Send the grade items of each course and category to the AI service in gradebook order, so the payload no longer depends on the database row order (it differed on PostgreSQL)
+
 ## [1.0.7-wp] - 2026-11-10
 
 ### 🚀 Added

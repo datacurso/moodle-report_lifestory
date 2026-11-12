@@ -69,6 +69,7 @@ $string['privacy:metadata:ai_provider:userid'] = 'Pengenal tersamar (hash HMAC) 
 $string['privacy:metadata:report_lifestory_feedback'] = 'Menyimpan umpan balik terbaru yang dihasilkan AI untuk setiap siswa agar dapat diekspor dan dilihat kembali di kemudian hari.';
 $string['privacy:metadata:report_lifestory_feedback:courseid'] = 'Filter kursus yang digunakan saat umpan balik dihasilkan (0 berarti semua kursus).';
 $string['privacy:metadata:report_lifestory_feedback:feedback'] = 'Teks umpan balik yang dihasilkan AI.';
+$string['privacy:metadata:report_lifestory_feedback:scope'] = 'Kursus yang dianalisis oleh umpan balik dan kursus yang nilai tersembunyinya disertakan, sehingga hanya ditampilkan kepada pengguna yang dapat melihat nilai yang sama.';
 $string['privacy:metadata:report_lifestory_feedback:studentid'] = 'Siswa yang menjadi subjek umpan balik.';
 $string['privacy:metadata:report_lifestory_feedback:timecreated'] = 'Waktu pembuatan catatan umpan balik.';
 $string['privacy:metadata:report_lifestory_feedback:timemodified'] = 'Waktu perubahan terakhir catatan umpan balik.';

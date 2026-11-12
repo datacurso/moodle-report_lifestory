@@ -69,6 +69,7 @@ $string['privacy:metadata:ai_provider:userid'] = 'Eine pseudonymisierte Kennung 
 $string['privacy:metadata:report_lifestory_feedback'] = 'Speichert das zuletzt von der KI generierte Feedback für jeden Studenten, damit es exportiert und später eingesehen werden kann.';
 $string['privacy:metadata:report_lifestory_feedback:courseid'] = 'Der Kursfilter, mit dem das Feedback generiert wurde (0 bedeutet alle Kurse).';
 $string['privacy:metadata:report_lifestory_feedback:feedback'] = 'Der von der KI generierte Feedbacktext.';
+$string['privacy:metadata:report_lifestory_feedback:scope'] = 'Die Kurse, die das Feedback ausgewertet hat, und jene, deren verborgene Bewertungen es einbezogen hat, damit es nur Nutzern angezeigt wird, die dieselben Bewertungen sehen dürfen.';
 $string['privacy:metadata:report_lifestory_feedback:studentid'] = 'Der Student, auf den sich das Feedback bezieht.';
 $string['privacy:metadata:report_lifestory_feedback:timecreated'] = 'Der Zeitpunkt, zu dem der Feedbackdatensatz erstellt wurde.';
 $string['privacy:metadata:report_lifestory_feedback:timemodified'] = 'Der Zeitpunkt der letzten Änderung des Feedbackdatensatzes.';
